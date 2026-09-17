@@ -1,0 +1,34 @@
+{
+  "id": "KFP-001",
+  "source": "X07 VS Code / https://github.com/microsoft/vscode/issues/311420",
+  "framework": "github",
+  "input_packet": {
+    "from": "planner",
+    "to": "executor",
+    "task": "Passer en mode exécuteur après le plan",
+    "state": { "known": { "issue": "311420" }, "version": "1" },
+    "work_done": [{ "claim": "Le mode exécuteur a été confirmé.", "evidence_refs": ["sess1"] }],
+    "work_remaining": ["Exécuter le plan"],
+    "evidence": [
+      {
+        "id": "sess1",
+        "type": "document",
+        "source": "vscode-session",
+        "timestamp": "2026-04-20T12:00:00Z",
+        "status": "",
+        "content": {
+          "switchAgentObservedInSessionLog": false,
+          "executorModeObservedAfterHandoff": false,
+          "sourcePlannerModeStillPresentAfterHandoff": true
+        }
+      }
+    ]
+  },
+  "v0_verdict": "REPRENABLE",
+  "correct_verdict": "CORROMPU",
+  "failure_class": "negation_sans_token_fail",
+  "missing_rule": "Un booléen qui nie la claim force CORROMPU, même sans token FAIL. Le mot false ne matche pas fail ; le booléen n'entre pas dans le scanner.",
+  "severity": "critical",
+  "status": "KNOWN_FALSE_POSITIVE",
+  "recorded_at": "2026-09-17"
+}

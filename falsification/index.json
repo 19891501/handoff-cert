@@ -1,0 +1,44 @@
+{
+  "bench": "adversarial",
+  "judge": "V0",
+  "frozen": true,
+  "recorded_at": "2026-09-17",
+  "cases": [
+    {
+      "id": "KFP-001",
+      "source": "X07 VS Code",
+      "framework": "github",
+      "v0": "REPRENABLE",
+      "correct": "CORROMPU",
+      "class": "negation_sans_token_fail",
+      "severity": "critical"
+    },
+    {
+      "id": "KFP-002",
+      "source": "X09 CrewAI",
+      "framework": "crewai",
+      "v0": "REPRENABLE",
+      "correct": "PARTIEL",
+      "class": "expected_output_non_execute",
+      "severity": "high"
+    },
+    {
+      "id": "KFP-003",
+      "source": "X10 CrewAI",
+      "framework": "crewai",
+      "v0": "REPRENABLE",
+      "correct": "PARTIEL",
+      "class": "chemin_non_empreinte",
+      "severity": "high"
+    },
+    {
+      "id": "KFP-004",
+      "source": "X16 Magentic",
+      "framework": "microsoft",
+      "v0": "REPRENABLE",
+      "correct": "PARTIEL",
+      "class": "ledger_chat_non_piece_outil",
+      "severity": "high"
+    }
+  ]
+}

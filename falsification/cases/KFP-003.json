@@ -1,0 +1,30 @@
+{
+  "id": "KFP-003",
+  "source": "X10 CrewAI / https://raw.githubusercontent.com/crewaiinc/skills/main/skills/getting-started/SKILL.md",
+  "framework": "crewai",
+  "input_packet": {
+    "from": "reporting_analyst",
+    "to": "publisher",
+    "task": "Produire le rapport",
+    "state": { "known": { "output_file": "output/report.md" }, "version": "1" },
+    "work_done": [{ "claim": "Le rapport a été écrit.", "evidence_refs": ["f1"] }],
+    "work_remaining": ["Publier le rapport"],
+    "evidence": [
+      {
+        "id": "f1",
+        "type": "document",
+        "source": "crewai",
+        "timestamp": "2026-05-08T00:00:00Z",
+        "status": "",
+        "content": { "path": "output/report.md" }
+      }
+    ]
+  },
+  "v0_verdict": "REPRENABLE",
+  "correct_verdict": "PARTIEL",
+  "failure_class": "chemin_non_empreinte",
+  "missing_rule": "Un chemin de fichier n'est pas une empreinte du contenu.",
+  "severity": "high",
+  "status": "KNOWN_FALSE_POSITIVE",
+  "recorded_at": "2026-09-17"
+}

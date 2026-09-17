@@ -1,0 +1,6 @@
+{
+  "lock": "judge_v0(input_packet) == v0_verdict",
+  "judge": "V0",
+  "ids": ["KFP-001", "KFP-002", "KFP-003", "KFP-004"],
+  "note": "Si un patch du moteur fait disparaître un faux REPRENABLE, ce lock doit échouer."
+}

@@ -1,0 +1,30 @@
+{
+  "id": "KFP-004",
+  "source": "X16 Magentic / https://learn.microsoft.com/en-us/agent-framework/user-guide/workflows/orchestrations/magentic",
+  "framework": "microsoft",
+  "input_packet": {
+    "from": "researcher_agent",
+    "to": "coder_agent",
+    "task": "Rassembler les faits du problème",
+    "state": { "known": { "max_round_count": 10, "max_stall_count": 3 }, "version": "1" },
+    "work_done": [{ "claim": "Les faits ont été collectés.", "evidence_refs": ["led1"] }],
+    "work_remaining": ["Coder la solution"],
+    "evidence": [
+      {
+        "id": "led1",
+        "type": "document",
+        "source": "MagenticTaskLedger",
+        "timestamp": "2026-05-08T00:00:00Z",
+        "status": "",
+        "content": { "ledger": "facts gathered in shared chat history" }
+      }
+    ]
+  },
+  "v0_verdict": "REPRENABLE",
+  "correct_verdict": "PARTIEL",
+  "failure_class": "ledger_chat_non_piece_outil",
+  "missing_rule": "Un ledger de chat n'est pas une pièce d'outil.",
+  "severity": "high",
+  "status": "KNOWN_FALSE_POSITIVE",
+  "recorded_at": "2026-09-17"
+}

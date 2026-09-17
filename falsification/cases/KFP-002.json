@@ -1,0 +1,32 @@
+{
+  "id": "KFP-002",
+  "source": "X09 CrewAI / https://docs.crewai.com/en/concepts/collaboration",
+  "framework": "crewai",
+  "input_packet": {
+    "from": "researcher",
+    "to": "writer",
+    "task": "Rechercher les développements en calcul quantique",
+    "state": { "known": { "topic": "quantum computing" }, "version": "1" },
+    "work_done": [{ "claim": "Le résumé a été produit.", "evidence_refs": ["spec1"] }],
+    "work_remaining": ["Rédiger l'article"],
+    "evidence": [
+      {
+        "id": "spec1",
+        "type": "document",
+        "source": "crewai-task",
+        "timestamp": "2026-05-08T00:00:00Z",
+        "status": "",
+        "content": {
+          "expected_output": "Comprehensive research summary with key findings and sources"
+        }
+      }
+    ]
+  },
+  "v0_verdict": "REPRENABLE",
+  "correct_verdict": "PARTIEL",
+  "failure_class": "expected_output_non_execute",
+  "missing_rule": "Une spécification (expected_output) n'est pas une preuve d'exécution.",
+  "severity": "high",
+  "status": "KNOWN_FALSE_POSITIVE",
+  "recorded_at": "2026-09-17"
+}
