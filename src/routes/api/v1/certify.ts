@@ -6,15 +6,22 @@ import {
   X402_NETWORK,
   enforced,
   gateCertify,
+  nonceLedgerInfo,
   payTo,
   requirements,
 } from "@/lib/offer/x402";
+import { ensureSqlLedger } from "@/lib/offer/x402.server";
 
 export const Route = createFileRoute("/api/v1/certify")({
   server: {
     handlers: {
-      GET: async () =>
-        Response.json({
+      GET: async () => {
+        try {
+          await ensureSqlLedger();
+        } catch {
+          /* catalogue public */
+        }
+        return Response.json({
           sku: OFFER.sku,
           endpoint: OFFER.endpoint,
           price_eur: OFFER.price_eur,
@@ -26,10 +33,13 @@ export const Route = createFileRoute("/api/v1/certify")({
             payTo: payTo(),
             enforced: enforced(),
             facilitator: "/api/x402",
+            ledger: nonceLedgerInfo(),
             accepts: [requirements()],
           },
-        }),
+        });
+      },
       POST: async ({ request }) => {
+        await ensureSqlLedger();
         const gate = await gateCertify(request);
         if (!gate.ok) {
           return Response.json(gate.body, { status: 402 });

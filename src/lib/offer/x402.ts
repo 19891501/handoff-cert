@@ -1,9 +1,5 @@
-import {
-  recoverTypedDataAddress,
-  verifyTypedData,
-  type Address,
-  type Hex,
-} from "viem";
+import { type Address, type Hex } from "viem";
+import { memoryLedger, type NonceLedger } from "./nonce-ledger";
 
 export const X402_VERSION = 1;
 export const X402_SCHEME = "exact";
@@ -24,7 +20,26 @@ const TRANSFER_TYPES = {
   ],
 } as const;
 
-const usedNonces = new Set<string>();
+let ledger: NonceLedger = memoryLedger();
+
+export function installNonceLedger(next: NonceLedger) {
+  ledger = next;
+}
+
+export function currentNonceLedger(): NonceLedger {
+  return ledger;
+}
+
+export function nonceLedgerInfo() {
+  return {
+    table: "x402_nonces" as const,
+    key: ["network", "payer", "nonce"] as const,
+    backend: ledger.backend,
+    settle_replay: "same_transaction" as const,
+    verify_consumed: "nonce_replay" as const,
+    verify_consumes: false as const,
+  };
+}
 
 export function payTo(): Address | null {
   const raw = process.env.X402_PAY_TO?.trim();
@@ -209,10 +224,12 @@ export async function verifyPayment(
   if (!Number.isFinite(after) || !Number.isFinite(before) || after > now || now >= before) {
     return { isValid: false, invalidReason: "window_expired" };
   }
-  if (usedNonces.has(auth.nonce.toLowerCase())) {
-    return { isValid: false, invalidReason: "nonce_replay" };
+  const seen = await ledger.get(paymentPayload.network, auth.from, auth.nonce);
+  if (seen?.transaction) {
+    return { isValid: false, payer: auth.from, invalidReason: "nonce_replay" };
   }
 
+  const { recoverTypedDataAddress, verifyTypedData } = await import("viem");
   const domain = eip712Domain();
   const message = typedMessage(auth);
   let recovered: Address;
@@ -242,9 +259,9 @@ export async function verifyPayment(
   return { isValid: true, payer: recovered };
 }
 
-/** Test-only: forget a nonce so a fixture can be reused. */
-export function forgetNonce(nonce: string) {
-  usedNonces.delete(nonce.toLowerCase());
+/** Test-only: drop a nonce so a fixture can be reused. */
+export async function forgetNonce(nonce: string, payer = "", network = X402_NETWORK) {
+  if (payer) await ledger.del(network, payer, nonce);
 }
 
 export interface SettleResult {
@@ -253,12 +270,24 @@ export interface SettleResult {
   transaction: string;
   network: typeof X402_NETWORK;
   errorReason?: string;
+  replay?: boolean;
 }
 
 export async function settlePayment(
   paymentPayload: PaymentPayload,
   paymentRequirements: PaymentRequirements,
 ): Promise<SettleResult> {
+  const auth = paymentPayload.payload.authorization;
+  const existing = await ledger.get(paymentPayload.network, auth.from, auth.nonce);
+  if (existing?.transaction) {
+    return {
+      success: true,
+      payer: auth.from,
+      transaction: existing.transaction,
+      network: X402_NETWORK,
+      replay: true,
+    };
+  }
   const verified = await verifyPayment(paymentPayload, paymentRequirements);
   if (!verified.isValid) {
     return {
@@ -309,7 +338,6 @@ export async function settlePayment(
     ] as const,
     client,
   });
-  const auth = paymentPayload.payload.authorization;
   try {
     const hash = await usdc.write.transferWithAuthorization([
       auth.from,
@@ -320,12 +348,19 @@ export async function settlePayment(
       auth.nonce,
       paymentPayload.payload.signature,
     ]);
-    usedNonces.add(auth.nonce.toLowerCase());
+    const stored = await ledger.put(
+      paymentPayload.network,
+      auth.from,
+      auth.nonce,
+      paymentRequirements.asset,
+      hash,
+    );
     return {
       success: true,
       payer: verified.payer,
-      transaction: hash,
+      transaction: stored.transaction,
       network: X402_NETWORK,
+      replay: stored.transaction !== hash,
     };
   } catch (e) {
     return {

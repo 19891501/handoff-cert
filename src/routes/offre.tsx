@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,10 +17,43 @@ const CURL = `curl -sS ${OFFER.endpoint} \\
   -H 'content-type: application/json' \\
   -d '{"paquet":{...}}'`;
 
+type LedgerInfo = {
+  table: string;
+  backend: "memory" | "sql";
+  key: string[];
+  settle_replay: string;
+  verify_consumed: string;
+  verify_consumes: boolean;
+};
+
+type FacilitatorInfo = {
+  enforced: boolean;
+  payTo: string | null;
+  amount: string;
+  network: string;
+  ledger: LedgerInfo;
+};
+
 function OffrePage() {
   const [out, setOut] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [x402, setX402] = useState<FacilitatorInfo | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/x402")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json: FacilitatorInfo | null) => {
+        if (!cancelled && json?.ledger) setX402(json);
+      })
+      .catch(() => {
+        /* contrat statique ci-dessous */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function callApi() {
     setBusy(true);
@@ -39,6 +72,8 @@ function OffrePage() {
       setBusy(false);
     }
   }
+
+  const ledger = x402?.ledger;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
@@ -79,6 +114,45 @@ function OffrePage() {
           </p>
         </article>
       </div>
+
+      <section className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+          Ledger de nonce
+        </p>
+        <h2 className="mt-3 font-display text-2xl tracking-tight">
+          Un paiement ne se dépense qu'une fois
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          Clé <span className="font-mono text-xs">(network, payer, nonce)</span>.
+          Verify ne consomme pas. Un settle rejoué renvoie la même transaction —
+          pas un nouveau hash, pas un second débit.
+        </p>
+        <div className="mt-6 overflow-hidden rounded-lg bg-background/60">
+          <table className="w-full text-sm">
+            <tbody>
+              {[
+                ["Table", ledger?.table ?? "x402_nonces"],
+                [
+                  "Backend",
+                  ledger?.backend === "sql"
+                    ? "sql — persistant"
+                    : "mémoire — preview",
+                ],
+                ["Settle rejoué", "même tx"],
+                ["Verify consommé", "nonce_replay"],
+                ["Verify consomme", "non"],
+              ].map(([k, v]) => (
+                <tr key={k} className="border-b border-border last:border-0">
+                  <td className="px-4 py-3 font-medium">{k}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                    {v}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <div className="mt-10 flex flex-wrap gap-3">
         <Button onClick={callApi} disabled={busy}>

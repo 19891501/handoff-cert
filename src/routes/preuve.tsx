@@ -273,8 +273,8 @@ function PreuvePage() {
           racine, mais un sondage unique ne la trouve qu'avec proba 1/n.
         </p>
         <p className={cn("mt-3 text-sm text-muted-foreground")}>
-          Cette page ne paie rien. x402 reste un stub. Le certificateur, lui,
-          n'a pas changé.
+          Cette page ne paie rien. Le ledger x402 vit ailleurs : settle
+          rejoué → même tx. Le certificateur, lui, n'a pas changé.
         </p>
       </section>
     </div>

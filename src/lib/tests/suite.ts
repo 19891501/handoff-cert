@@ -26,6 +26,7 @@ import { getCase } from "../handoff/cases.ts";
 import {
   AMOUNT_ATOMIC,
   forgetNonce,
+  installNonceLedger,
   paymentRequiredBody,
   parsePaymentHeader,
   requirements,
@@ -33,6 +34,7 @@ import {
   signExact,
   verifyPayment,
 } from "../offer/x402.ts";
+import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 export interface CheckResult {
@@ -50,6 +52,34 @@ function fail(message: string): never {
 
 function eq<T>(got: T, expected: T, label: string) {
   if (got !== expected) fail(`${label}: attendu ${String(expected)}, obtenu ${String(got)}`);
+}
+
+/** Simule ON CONFLICT DO NOTHING RETURNING pour sqlLedger, sans Postgres. */
+function fakeSql(): SqlLike {
+  const rows = new Map<string, { transaction: string; asset: string }>();
+  const key = (network: string, payer: string, nonce: string) =>
+    `${network}:${payer}:${nonce}`;
+  return {
+    async query(text, params = []) {
+      const [network, payer, nonce, asset, transaction] = params as string[];
+      if (/insert into x402_nonces/i.test(text)) {
+        const k = key(network, payer, nonce);
+        if (rows.has(k)) return [];
+        const row = { transaction, asset };
+        rows.set(k, row);
+        return [row];
+      }
+      if (/select tx_hash as transaction/i.test(text)) {
+        const row = rows.get(key(network, payer, nonce));
+        return row ? [row] : [];
+      }
+      if (/delete from x402_nonces/i.test(text)) {
+        rows.delete(key(network, payer, nonce));
+        return [];
+      }
+      throw new Error(`sql inattendue: ${text}`);
+    },
+  };
 }
 
 export async function runSuite(): Promise<CheckResult[]> {
@@ -256,6 +286,7 @@ export async function runSuite(): Promise<CheckResult[]> {
   });
 
   await check("x402", "facilitator", "signature EIP-3009 acceptée, montant faux refusé, settle sans clé honnête", async () => {
+    installNonceLedger(memoryLedger());
     const payer = privateKeyToAccount(generatePrivateKey());
     const merchant = privateKeyToAccount(generatePrivateKey()).address;
     const reqs = { ...requirements(), payTo: merchant };
@@ -271,12 +302,73 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(settled.success, false, "pas de clé");
     eq(settled.errorReason, "no_settler_key", "honnête");
     eq(settled.transaction, "", "pas de hash fantôme");
-    forgetNonce(payload.payload.authorization.nonce);
+    const still = await verifyPayment(payload, reqs);
+    eq(still.isValid, true, "verify ne consomme pas");
     const replayBody = paymentRequiredBody("X-PAYMENT header is required");
     eq(replayBody.x402Version, 1, "v1");
     eq(replayBody.accepts[0]?.maxAmountRequired, AMOUNT_ATOMIC, "atomic");
     const parsed = parsePaymentHeader(JSON.stringify(payload));
     eq(parsed?.payload.authorization.from.toLowerCase(), payer.address.toLowerCase(), "header");
+  });
+
+  await check("x402", "ledger", "settle rejoué renvoie la même tx, verify voit nonce_replay", async () => {
+    const book = memoryLedger();
+    installNonceLedger(book);
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const auth = payload.payload.authorization;
+    await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "0xabc");
+    const again = await settlePayment(payload, reqs);
+    eq(again.success, true, "idempotent");
+    eq(again.transaction, "0xabc", "même tx");
+    eq(again.replay, true, "replay");
+    const replayed = await verifyPayment(payload, reqs);
+    eq(replayed.isValid, false, "verify");
+    eq(replayed.invalidReason, "nonce_replay", "reason");
+    await forgetNonce(auth.nonce, auth.from);
+  });
+
+  await check("x402", "sql-ledger", "ON CONFLICT renvoie la première tx, casse pliée", async () => {
+    const book = sqlLedger(fakeSql());
+    installNonceLedger(book);
+    const first = await book.put(
+      "base-sepolia",
+      "0xABC0000000000000000000000000000000000001",
+      "0xAA",
+      "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "0xaaa",
+    );
+    const again = await book.put(
+      "base-sepolia",
+      "0xabc0000000000000000000000000000000000001",
+      "0xaa",
+      "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      "0xbbb",
+    );
+    eq(first.transaction, "0xaaa", "insert");
+    eq(again.transaction, "0xaaa", "first wins");
+    eq(book.backend, "sql", "backend");
+    const got = await book.get(
+      "base-sepolia",
+      "0xAbC0000000000000000000000000000000000001",
+      "0xAa",
+    );
+    eq(got?.transaction, "0xaaa", "get");
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const auth = payload.payload.authorization;
+    await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "0xdead");
+    const settled = await settlePayment(payload, reqs);
+    eq(settled.success, true, "idempotent");
+    eq(settled.transaction, "0xdead", "même tx");
+    eq(settled.replay, true, "replay");
+    const replayed = await verifyPayment(payload, reqs);
+    eq(replayed.invalidReason, "nonce_replay", "verify");
+    installNonceLedger(memoryLedger());
   });
 
   for (const c of BENCH_CASES) {

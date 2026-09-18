@@ -73,6 +73,7 @@ function Home() {
                 ["Adversarial", "4 KFP encore faux — le lock doit rester rouge si on « corrige »"],
                 ["Sceau", "cp.v1 · Integrity ≠ Truth"],
                 ["Hook", "wrapNode autour de goto · silence ailleurs"],
+                ["Ledger", "nonce persisté · replay = même tx"],
                 ["On ne construit pas", "comptes, npm, reconstruct, HMAC AION"],
               ].map(([k, v]) => (
                 <tr key={k} className="border-b border-border last:border-0">

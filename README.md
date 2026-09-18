@@ -55,6 +55,7 @@ POST /api/x402/settle
 - Sans `X-PAYMENT` : certify reste 200 (preview) si `X402_PAY_TO` est vide.
 - Avec `X402_PAY_TO=0x…` : POST `/api/v1/certify` exige un paiement ; 402 sinon.
 - `X402_SETTLER_KEY` : clé qui soumet `transferWithAuthorization`. Absente → `no_settler_key`, **pas** de hash inventé.
+- Ledger `x402_nonces` : clé `(network, payer, nonce)`. Preview : mémoire. Production : SQL (Neon). Un settle rejoué renvoie la **même** tx. Verify d’un nonce consommé → `nonce_replay`. Verify ne consomme pas.
 
 1000 atomic = 0,001 USDC testnet.
 

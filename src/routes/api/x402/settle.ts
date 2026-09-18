@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requirements, settlePayment, type PaymentPayload, type PaymentRequirements } from "@/lib/offer/x402";
+import { ensureSqlLedger } from "@/lib/offer/x402.server";
 
 export const Route = createFileRoute("/api/x402/settle")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        await ensureSqlLedger();
         let body: { paymentPayload?: PaymentPayload; paymentRequirements?: PaymentRequirements };
         try {
           body = (await request.json()) as typeof body;
