@@ -209,7 +209,7 @@ function assembleReport(rows: AttackRow[], ruleset: RulesetId): AttackReport {
   rows.sort((a, b) => Number(b.kills) - Number(a.kills) || Number(b.falseReprenable) - Number(a.falseReprenable));
   const killer = rows.find((r) => r.kills) ?? null;
   const projectClaim: "tenue" | "tuee" = nKills > 0 ? "tuee" : "tenue";
-  const judgeLabel = ruleset === "1.1" ? "V1.1" : "V0";
+  const judgeLabel = ruleset === "1.0" ? "V0" : `V${ruleset}`;
   const sentence =
     projectClaim === "tuee"
       ? `CONTRE-EXEMPLE : ${killer!.attack.id} — le monde est ${killer!.attack.world}, ${judgeLabel} dit ${killer!.gate.verdict}, la grille ${killer!.gate.decision}. CERT+GATE n'empêche pas la reprise dangereuse.`
@@ -248,6 +248,16 @@ export async function runAttack11(): Promise<AttackReport> {
     rows.push(classifyRow(attack, gate));
   }
   return assembleReport(rows, "1.1");
+}
+
+/** Same corpus through the 1.2 gate. Does not touch the 1.0 scoreboard. */
+export async function runAttack12(): Promise<AttackReport> {
+  const rows: AttackRow[] = [];
+  for (const attack of attackCorpus()) {
+    const gate = await gateResume(attack.packet, "1.2");
+    rows.push(classifyRow(attack, gate));
+  }
+  return assembleReport(rows, "1.2");
 }
 
 export interface ResetAB {

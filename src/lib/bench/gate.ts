@@ -4,7 +4,7 @@ import type { Certificate, PublicCertificate, Verdict } from "@/lib/handoff/type
 /** B reprend seulement si le notaire dit REPRENABLE. */
 export type GateDecision = "PASS" | "STOP";
 
-export type RulesetId = "1.0" | "1.1";
+export type RulesetId = "1.0" | "1.1" | "1.2";
 
 export interface GateResult {
   couple: "CERT+GATE";
@@ -60,9 +60,56 @@ export async function hasRuleset11(): Promise<boolean> {
   return (await loadCertify11()) !== null;
 }
 
+/** false = import already failed; undefined = not tried; fn = loaded. */
+let certify12Cache: CertifyFn | false | undefined;
+
+function bindCertify12(mod: { certify12?: CertifyFn }): CertifyFn | null {
+  if (typeof mod.certify12 !== "function") return null;
+  const impl = mod.certify12;
+  return (packet) => impl(packet);
+}
+
+/**
+ * Lazy load of certify12. If the module is missing or has no certify12,
+ * return null — never invent a 1.2 judge.
+ */
+async function loadCertify12(): Promise<CertifyFn | null> {
+  if (certify12Cache === false) return null;
+  if (certify12Cache) return certify12Cache;
+
+  const attempts: Array<() => Promise<{ certify12?: CertifyFn }>> = [
+    () => import("../handoff/ruleset12.ts"),
+    () => import("../handoff/ruleset12"),
+    () => import("@/lib/handoff/ruleset12"),
+  ];
+
+  for (const load of attempts) {
+    try {
+      const fn = bindCertify12(await load());
+      if (fn) {
+        certify12Cache = fn;
+        return fn;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  certify12Cache = false;
+  return null;
+}
+
+export async function hasRuleset12(): Promise<boolean> {
+  return (await loadCertify12()) !== null;
+}
+
+function judgeLabel(ruleset: RulesetId): string {
+  return ruleset === "1.0" ? "V0" : `V${ruleset}`;
+}
+
 function fromCertificate(cert: Certificate, ruleset: RulesetId): GateResult {
   const certificate = toPublicCertificate(cert);
-  const label = ruleset === "1.1" ? "V1.1" : "V0";
+  const label = judgeLabel(ruleset);
   if (cert.verdict === "REPRENABLE") {
     return {
       couple: "CERT+GATE",
@@ -99,6 +146,17 @@ export async function gateResume(
     }
     const cert = await certify11(packet);
     return fromCertificate(cert, "1.1");
+  }
+
+  if (ruleset === "1.2") {
+    const certify12 = await loadCertify12();
+    if (!certify12) {
+      throw new Error(
+        "ruleset 1.2 unavailable: certify12 import failed — 1.2 is not invented",
+      );
+    }
+    const cert = await certify12(packet);
+    return fromCertificate(cert, "1.2");
   }
 
   const cert = await certify(packet);

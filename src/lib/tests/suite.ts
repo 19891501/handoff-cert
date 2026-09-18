@@ -544,6 +544,42 @@ export async function runSuite(): Promise<CheckResult[]> {
     installNonceLedger(memoryLedger());
   });
 
+  await check("x402", "pending-recover", "lookup hash recovers pending as replay success", async () => {
+    const book = memoryLedger();
+    installNonceLedger(book);
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const auth = payload.payload.authorization;
+    await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "");
+    const settled = await settlePayment(payload, reqs, async () => "0xabc");
+    eq(settled.success, true, "recovered");
+    eq(settled.transaction, "0xabc", "hash");
+    eq(settled.replay, true, "replay");
+    const got = await book.get(payload.network, auth.from, auth.nonce);
+    eq(got?.transaction, "0xabc", "put");
+    installNonceLedger(memoryLedger());
+  });
+
+  await check("x402", "pending-lookup-null", "lookup null keeps settle_pending, no phantom hash", async () => {
+    const book = memoryLedger();
+    installNonceLedger(book);
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const auth = payload.payload.authorization;
+    await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "");
+    const settled = await settlePayment(payload, reqs, async () => null);
+    eq(settled.success, false, "pas de succès");
+    eq(settled.transaction, "", "pas de hash fantôme");
+    eq(settled.errorReason, "settle_pending", "pending");
+    const still = await book.get(payload.network, auth.from, auth.nonce);
+    eq(still?.transaction, "", "pas de second write");
+    installNonceLedger(memoryLedger());
+  });
+
   await check("x402", "pending-first-wins", "first-wins still works", async () => {
     const mem = memoryLedger();
     const first = await mem.put("base-sepolia", "0xP", "0xN", "0xasset", "0xaaa");

@@ -12,7 +12,12 @@ import type { PublicCertificate } from "./types";
  * Pass a dedicated ISSUER_SECRET as `secret`. HMAC is a MAC, not an identity
  * of A (nor of the issuer as a public key).
  *
- * Not wired into serveCertify / engine — integrite stays non_fourni on the API.
+ * serveCertify attaches `{ signature, key_id }` as `issuer_sig` on the public
+ * certificate when ISSUER_SECRET or ISSUER_ED25519_KEY is set. Engine
+ * certify() stays unsigned. integrite remains non_fourni: an issuer MAC is
+ * not a verification of agent A, and is not claimed as such.
+ *
+ * Never a fake HMAC — unset env yields no signature field at all.
  */
 
 export const SIGN_ALG_ED25519 = "Ed25519" as const;
@@ -30,6 +35,12 @@ export type SignablePublicFields = Pick<
   "verdict" | "ruleset" | "input_hash" | "certificate_id"
 >;
 
+/** On-wire issuer signature. Not an identity of agent A. */
+export interface IssuerSig {
+  signature: string;
+  key_id: string;
+}
+
 let ed25519Cached: boolean | null = null;
 
 export async function signingAlgorithm(): Promise<SigningAlgorithm> {
@@ -43,6 +54,42 @@ export function canonicalPublicCertificate(pub: SignablePublicFields): string {
     ruleset: pub.ruleset,
     verdict: pub.verdict,
   });
+}
+
+/**
+ * Decode ISSUER_SECRET / ISSUER_ED25519_KEY. Even-length hex when it parses,
+ * otherwise UTF-8. Never invents a default key.
+ */
+export function decodeIssuerSecret(raw: string): Uint8Array {
+  const s = raw.trim();
+  const hex = fromHex(s);
+  if (hex && hex.byteLength > 0) return hex;
+  return encode(s);
+}
+
+/**
+ * Issuer material from env, or null if unset/blank. Prefers
+ * ISSUER_ED25519_KEY over ISSUER_SECRET. No default, no fake MAC.
+ */
+export function issuerSecretFromEnv(
+  source: NodeJS.ProcessEnv = process.env,
+): Uint8Array | null {
+  const raw = source.ISSUER_ED25519_KEY?.trim() || source.ISSUER_SECRET?.trim();
+  if (!raw) return null;
+  return decodeIssuerSecret(raw);
+}
+
+/**
+ * Sign portable public fields for the wire when issuer material is configured.
+ * Returns null when both env vars are unset — callers must omit `issuer_sig`.
+ */
+export async function issuerSigOnWire(
+  pub: SignablePublicFields,
+  source: NodeJS.ProcessEnv = process.env,
+): Promise<IssuerSig | null> {
+  const secret = issuerSecretFromEnv(source);
+  if (!secret) return null;
+  return signPublicCertificate(pub, secret);
 }
 
 export async function signPublicCertificate(

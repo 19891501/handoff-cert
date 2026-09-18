@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   runAttack,
   runAttack11,
+  runAttack12,
   runResetAB,
   type AttackReport,
   type ResetAB,
@@ -18,18 +19,26 @@ function getRunAttack11(): (() => Promise<AttackReport>) | null {
   return runAttack11;
 }
 
+function getRunAttack12(): (() => Promise<AttackReport>) | null {
+  return typeof runAttack12 === "function" ? runAttack12 : null;
+}
+
 const RUN_ATTACK_11 = getRunAttack11();
+const RUN_ATTACK_12 = getRunAttack12();
 
 function AttaquePage() {
   const [report, setReport] = useState<AttackReport | null>(null);
   const [report11, setReport11] = useState<AttackReport | null>(null);
+  const [report12, setReport12] = useState<AttackReport | null>(null);
   const [error11, setError11] = useState(false);
+  const [error12, setError12] = useState(false);
   const [reset, setReset] = useState<ResetAB | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function run() {
     setBusy(true);
     setError11(false);
+    setError12(false);
     const next = await runAttack();
     setReport(next);
     if (next.killer) setReset(await runResetAB(next.killer.attack.packet));
@@ -45,6 +54,17 @@ function AttaquePage() {
     } else {
       setReport11(null);
     }
+
+    if (RUN_ATTACK_12) {
+      try {
+        setReport12(await RUN_ATTACK_12());
+      } catch {
+        setReport12(null);
+        setError12(true);
+      }
+    } else {
+      setReport12(null);
+    }
     setBusy(false);
   }
 
@@ -54,19 +74,25 @@ function AttaquePage() {
 
   const killed = report?.projectClaim === "tuee";
   const has11 = Boolean(RUN_ATTACK_11);
+  const has12 = Boolean(RUN_ATTACK_12);
+  const extraNotaries = Number(has11) + Number(has12);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-subtle">
-        {has11
-          ? "CERT+GATE · deux notaires · V0 gelé"
-          : "CERT+GATE · Reset A→B · juge gelé"}
+        {has12
+          ? "CERT+GATE · trois notaires · V0 gelé"
+          : has11
+            ? "CERT+GATE · deux notaires · V0 gelé"
+            : "CERT+GATE · Reset A→B · juge gelé"}
       </p>
       <h1 className="mt-2 font-display text-4xl tracking-tight">Attaque</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        {has11
-          ? "Deux notaires, même corpus. V0 / GATE 1.0 : claim tué. 1.1 n'est pas un patch du gel. KFP-001 reste ouvert sur 1.0."
-          : "Prouve que le couple empêche une reprise dangereuse — ou publie le contre-exemple qui tue le claim. wrapNode observe. gateNode juge. V0 n'est pas retuné."}
+        {has12
+          ? "Trois notaires, même corpus. V0 / GATE 1.0 : claim tué. 1.1 et 1.2 ne sont pas un patch du gel. KFP-001 reste ouvert sur 1.0."
+          : has11
+            ? "Deux notaires, même corpus. V0 / GATE 1.0 : claim tué. 1.1 n'est pas un patch du gel. KFP-001 reste ouvert sur 1.0."
+            : "Prouve que le couple empêche une reprise dangereuse — ou publie le contre-exemple qui tue le claim. wrapNode observe. gateNode juge. V0 n'est pas retuné."}
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -75,7 +101,7 @@ function AttaquePage() {
         </Button>
         {report ? (
           <Badge tone={killed ? "corrompu" : "reprenable"}>
-            {has11
+            {has11 || has12
               ? killed
                 ? "V0 : claim tué"
                 : "V0 : claim tenu sur ce corpus"
@@ -91,16 +117,31 @@ function AttaquePage() {
               : "1.1 : tenu sur ce corpus"}
           </Badge>
         ) : null}
+        {has12 && report12 ? (
+          <Badge tone={report12.projectClaim === "tuee" ? "corrompu" : "partiel"}>
+            {report12.projectClaim === "tuee"
+              ? "1.2 : claim tué"
+              : "1.2 : tenu sur ce corpus"}
+          </Badge>
+        ) : null}
       </div>
 
       {report ? (
         <>
-          <div className={has11 ? "mt-8 grid gap-4 lg:grid-cols-2" : "mt-8"}>
+          <div
+            className={
+              extraNotaries > 1
+                ? "mt-8 grid gap-4 lg:grid-cols-3"
+                : extraNotaries === 1
+                  ? "mt-8 grid gap-4 lg:grid-cols-2"
+                  : "mt-8"
+            }
+          >
             <NotaryCard
-              eyebrow={has11 ? "V0 / GATE 1.0" : "Verdict de l'expérience"}
+              eyebrow={has11 || has12 ? "V0 / GATE 1.0" : "Verdict de l'expérience"}
               heading={killed ? "Le couple ne tient pas." : "Pas de kill sur ce corpus."}
               body={
-                has11
+                has11 || has12
                   ? `${report.sentence} KFP-001 n'est pas fermé sur 1.0.`
                   : report.sentence
               }
@@ -135,18 +176,47 @@ function AttaquePage() {
                 </article>
               )
             ) : null}
+            {has12 ? (
+              report12 ? (
+                <NotaryCard
+                  eyebrow="1.2 autre notaire"
+                  heading={
+                    report12.projectClaim === "tuee"
+                      ? "Le notaire 1.2 ne tient pas non plus."
+                      : "Pas de kill 1.2 sur ce corpus."
+                  }
+                  body={
+                    report12.projectClaim === "tuee"
+                      ? `${report12.sentence} Cela ne réécrit pas V0.`
+                      : `${report12.sentence} Cela ne ferme pas KFP-001 sur V0.`
+                  }
+                  report={report12}
+                />
+              ) : (
+                <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+                    1.2 autre notaire
+                  </p>
+                  <p className="mt-4 font-mono text-xs text-subtle">
+                    {error12
+                      ? "Banc 1.2 illisible. Aucun chiffre inventé."
+                      : "Banc 1.2 en cours."}
+                  </p>
+                </article>
+              )
+            ) : null}
           </div>
 
           {report.killer ? (
             <article className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-                {has11 ? "Premier contre-exemple · V0" : "Premier contre-exemple"}
+                {has11 || has12 ? "Premier contre-exemple · V0" : "Premier contre-exemple"}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="font-mono text-sm">{report.killer.attack.id}</span>
                 <Badge tone="corrompu">kill</Badge>
                 <Badge tone="default">{report.killer.attack.vector}</Badge>
-                {has11 ? <Badge tone="corrompu">ouvert sur 1.0</Badge> : null}
+                {has11 || has12 ? <Badge tone="corrompu">ouvert sur 1.0</Badge> : null}
               </div>
               <h3 className="mt-3 font-display text-2xl tracking-tight">
                 {report.killer.attack.title}
@@ -180,29 +250,57 @@ function AttaquePage() {
             </article>
           ) : null}
 
-          {has11 ? (
-            <div className="mt-10 grid gap-10 lg:grid-cols-2">
+          {has11 || has12 ? (
+            <div
+              className={
+                has11 && has12
+                  ? "mt-10 grid gap-10 lg:grid-cols-3"
+                  : "mt-10 grid gap-10 lg:grid-cols-2"
+              }
+            >
               <Scoreboard
                 title="Scoreboard V0 / GATE 1.0"
                 blurb="Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir. Kill = le monde est CORROMPU et B part quand même. Claim tué."
                 report={report}
               />
-              {report11 ? (
-                <Scoreboard
-                  title="Scoreboard ruleset 1.1"
-                  blurb="Autre notaire, même attaques. Un score 1.1 ne ferme pas KFP-001 sur V0."
-                  report={report11}
-                />
-              ) : (
-                <section>
-                  <h2 className="font-display text-2xl tracking-tight">Scoreboard ruleset 1.1</h2>
-                  <p className="mt-2 font-mono text-xs text-subtle">
-                    {error11
-                      ? "Banc 1.1 illisible. Aucun chiffre inventé."
-                      : "Banc 1.1 en cours."}
-                  </p>
-                </section>
-              )}
+              {has11 ? (
+                report11 ? (
+                  <Scoreboard
+                    title="Scoreboard ruleset 1.1"
+                    blurb="Autre notaire, même attaques. Un score 1.1 ne ferme pas KFP-001 sur V0."
+                    report={report11}
+                  />
+                ) : (
+                  <section>
+                    <h2 className="font-display text-2xl tracking-tight">Scoreboard ruleset 1.1</h2>
+                    <p className="mt-2 font-mono text-xs text-subtle">
+                      {error11
+                        ? "Banc 1.1 illisible. Aucun chiffre inventé."
+                        : "Banc 1.1 en cours."}
+                    </p>
+                  </section>
+                )
+              ) : null}
+              {has12 ? (
+                report12 ? (
+                  <Scoreboard
+                    title="Scoreboard 1.2 autre notaire"
+                    blurb="Autre notaire, même attaques. Un score 1.2 ne ferme pas KFP-001 sur V0."
+                    report={report12}
+                  />
+                ) : (
+                  <section>
+                    <h2 className="font-display text-2xl tracking-tight">
+                      Scoreboard 1.2 autre notaire
+                    </h2>
+                    <p className="mt-2 font-mono text-xs text-subtle">
+                      {error12
+                        ? "Banc 1.2 illisible. Aucun chiffre inventé."
+                        : "Banc 1.2 en cours."}
+                    </p>
+                  </section>
+                )
+              ) : null}
             </div>
           ) : (
             <Scoreboard

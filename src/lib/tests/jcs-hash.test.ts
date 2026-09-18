@@ -36,4 +36,21 @@ describe("canonicalize RFC 8785 / JCS", () => {
       "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
     );
   });
+
+  it("café decomposed vs composed produce the same digest", async () => {
+    const composed = "caf\u00e9";
+    const decomposed = "cafe\u0301";
+    assert.notEqual(composed, decomposed);
+    const a = { note: composed };
+    const b = { note: decomposed };
+    assert.equal(canonicalize(a), jcs(b));
+    assert.equal(jcs(a), jcs(b));
+    const [fromComposed, fromDecomposed, fromJcs] = await Promise.all([
+      sha256Hex(canonicalize(a)),
+      sha256Hex(canonicalize(b)),
+      sha256Hex(jcs(a)),
+    ]);
+    assert.equal(fromComposed, fromDecomposed);
+    assert.equal(fromComposed, fromJcs);
+  });
 });

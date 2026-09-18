@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { OFFER } from "@/lib/offer/catalog";
-import { serveCertify } from "@/lib/offer/serve";
+import { catalogueRulesets, parseBodyRuleset, serveCertify } from "@/lib/offer/serve";
 import {
   AMOUNT_ATOMIC,
   X402_NETWORK,
@@ -27,6 +27,7 @@ export const Route = createFileRoute("/api/v1/certify")({
           price_eur: OFFER.price_eur,
           billing: enforced() ? "x402" : OFFER.billing,
           method: "POST",
+          ...catalogueRulesets(),
           x402: {
             network: X402_NETWORK,
             amount: AMOUNT_ATOMIC,
@@ -45,6 +46,14 @@ export const Route = createFileRoute("/api/v1/certify")({
           body = await request.json();
         } catch {
           return Response.json({ erreur: "JSON invalide" }, { status: 400 });
+        }
+        try {
+          parseBodyRuleset(body);
+        } catch (e) {
+          return Response.json(
+            { erreur: e instanceof Error ? e.message : "ruleset inconnu" },
+            { status: 400 },
+          );
         }
         const gate = await gateCertify(request);
         if (!gate.ok) {

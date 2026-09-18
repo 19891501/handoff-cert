@@ -1,4 +1,4 @@
-import { gateResume } from "@/lib/bench/gate";
+import { gateResume, type RulesetId } from "@/lib/bench/gate";
 import type { AdoptResult } from "./hook";
 import { adopt } from "./hook";
 import type { ContinuationProof } from "@/lib/format/proof";
@@ -111,16 +111,38 @@ export function wrapNode<S extends Record<string, unknown>>(
   };
 }
 
+function stopCommand(
+  command: LangGraphCommand,
+  extra: Record<string, unknown>,
+): LangGraphCommand {
+  return {
+    ...command,
+    goto: LANGGRAPH_END,
+    update: {
+      ...(command.update ?? {}),
+      continuation_gate: "STOP",
+      ...extra,
+    },
+  };
+}
+
 /**
  * Grille : certify() puis STOP si le verdict n'est pas REPRENABLE.
  * wrapNode reste l'observateur (silence, pas de juge). gateNode est le couple attaqué.
+ * ruleset 1.0 (défaut) : comportement actuel. 1.1 : gateResume(..., "1.1") ; module
+ * manquant → fail closed (END) pour 1.1 seulement.
  */
 export function gateNode<S extends Record<string, unknown>>(
   nodeName: string,
   node: NodeFn<S>,
-  opts?: { graph?: string; packetOf?: (state: S) => unknown },
+  opts?: {
+    graph?: string;
+    packetOf?: (state: S) => unknown;
+    ruleset?: RulesetId;
+  },
 ): (state: S) => Promise<unknown> {
   const graph = opts?.graph ?? "graph";
+  const ruleset: RulesetId = opts?.ruleset ?? "1.0";
   return async (state: S) => {
     const result = await node(state);
     if (!isHandoffCommand(result)) return result;
@@ -129,27 +151,24 @@ export function gateNode<S extends Record<string, unknown>>(
       opts?.packetOf?.(state) ??
       (isRecord(state) ? (state.packet ?? state.handoff) : undefined);
     if (packet === undefined || packet === null) {
-      return {
-        ...sealed.command,
-        goto: LANGGRAPH_END,
-        update: {
-          ...(sealed.command.update ?? {}),
-          continuation_gate: "STOP",
-          continuation_error: "paquet_absent",
-        },
-      };
+      return stopCommand(sealed.command, { continuation_error: "paquet_absent" });
     }
-    const g = await gateResume(packet);
+
+    let g;
+    if (ruleset === "1.1") {
+      try {
+        g = await gateResume(packet, "1.1");
+      } catch {
+        return stopCommand(sealed.command, {
+          continuation_error: "ruleset_1.1_unavailable",
+        });
+      }
+    } else {
+      g = await gateResume(packet);
+    }
+
     if (g.decision === "STOP") {
-      return {
-        ...sealed.command,
-        goto: LANGGRAPH_END,
-        update: {
-          ...(sealed.command.update ?? {}),
-          continuation_gate: "STOP",
-          continuation_verdict: g.verdict,
-        },
-      };
+      return stopCommand(sealed.command, { continuation_verdict: g.verdict });
     }
     return {
       ...sealed.command,

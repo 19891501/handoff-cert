@@ -1,6 +1,6 @@
 import { jcs } from "../format/jcs.ts";
 
-/** RFC 8785 JSON Canonicalization Scheme — same algorithm as jcs(). */
+/** RFC 8785 JSON Canonicalization Scheme — same algorithm as jcs() (NFC then JCS). */
 export function canonicalize(value: unknown): string {
   return jcs(value);
 }

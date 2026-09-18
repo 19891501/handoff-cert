@@ -273,9 +273,49 @@ export interface SettleResult {
   replay?: boolean;
 }
 
+export type ChainLookup = (args: {
+  network: string;
+  payer: string;
+  nonce: string;
+}) => Promise<string | null>;
+
+/**
+ * V-04 recover hook: if the ledger row is pending (empty tx) and `lookup`
+ * finds a chain hash, persist it. No lookup (preview default) → null.
+ * Lookup miss/throw → null, never a phantom hash, never `e.message`.
+ */
+export async function recover(
+  args: { network: string; payer: string; nonce: string; asset: string },
+  lookup?: ChainLookup,
+): Promise<string | null> {
+  const existing = await ledger.get(args.network, args.payer, args.nonce);
+  if (existing?.transaction) return existing.transaction;
+  if (!existing || !lookup) return null;
+  let found: string | null;
+  try {
+    found = await lookup({
+      network: args.network,
+      payer: args.payer,
+      nonce: args.nonce,
+    });
+  } catch {
+    return null;
+  }
+  if (!found) return null;
+  const stored = await ledger.put(
+    args.network,
+    args.payer,
+    args.nonce,
+    args.asset,
+    found,
+  );
+  return stored.transaction || null;
+}
+
 export async function settlePayment(
   paymentPayload: PaymentPayload,
   paymentRequirements: PaymentRequirements,
+  lookup?: ChainLookup,
 ): Promise<SettleResult> {
   const auth = paymentPayload.payload.authorization;
   const existing = await ledger.get(paymentPayload.network, auth.from, auth.nonce);
@@ -286,6 +326,33 @@ export async function settlePayment(
       transaction: existing.transaction,
       network: X402_NETWORK,
       replay: true,
+    };
+  }
+  if (existing && lookup) {
+    const found = await recover(
+      {
+        network: paymentPayload.network,
+        payer: auth.from,
+        nonce: auth.nonce,
+        asset: paymentRequirements.asset,
+      },
+      lookup,
+    );
+    if (found) {
+      return {
+        success: true,
+        payer: auth.from,
+        transaction: found,
+        network: X402_NETWORK,
+        replay: true,
+      };
+    }
+    return {
+      success: false,
+      payer: auth.from,
+      transaction: "",
+      network: X402_NETWORK,
+      errorReason: "settle_pending",
     };
   }
   const verified = await verifyPayment(paymentPayload, paymentRequirements);
@@ -388,6 +455,36 @@ export async function settlePayment(
       replay: stored.transaction !== hash,
     };
   } catch {
+    if (lookup) {
+      const found = await recover(
+        {
+          network: paymentPayload.network,
+          payer: auth.from,
+          nonce: auth.nonce,
+          asset: paymentRequirements.asset,
+        },
+        lookup,
+      );
+      if (found) {
+        return {
+          success: true,
+          payer: verified.payer,
+          transaction: found,
+          network: X402_NETWORK,
+          replay: true,
+        };
+      }
+      const pending = await ledger.get(paymentPayload.network, auth.from, auth.nonce);
+      if (pending && !pending.transaction) {
+        return {
+          success: false,
+          payer: verified.payer,
+          transaction: "",
+          network: X402_NETWORK,
+          errorReason: "settle_pending",
+        };
+      }
+    }
     return {
       success: false,
       payer: verified.payer,

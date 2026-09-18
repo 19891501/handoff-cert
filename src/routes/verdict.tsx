@@ -6,6 +6,7 @@ import { FINAL_VERDICT } from "@/lib/bench/verdict";
 import {
   runAttack,
   runAttack11,
+  runAttack12,
   type AttackReport,
 } from "@/lib/bench/attack";
 
@@ -15,28 +16,48 @@ function getRunAttack11(): (() => Promise<AttackReport>) | null {
   return runAttack11;
 }
 
+function getRunAttack12(): (() => Promise<AttackReport>) | null {
+  return typeof runAttack12 === "function" ? runAttack12 : null;
+}
+
 const RUN_ATTACK_11 = getRunAttack11();
+const RUN_ATTACK_12 = getRunAttack12();
 
 function VerdictPage() {
   const [report, setReport] = useState<AttackReport | null>(null);
   const [report11, setReport11] = useState<AttackReport | null>(null);
+  const [report12, setReport12] = useState<AttackReport | null>(null);
   const [error11, setError11] = useState(false);
+  const [error12, setError12] = useState(false);
 
   useEffect(() => {
     void runAttack().then(setReport);
-    if (!RUN_ATTACK_11) return;
-    void RUN_ATTACK_11()
-      .then((r) => {
-        setReport11(r);
-        setError11(false);
-      })
-      .catch(() => {
-        setReport11(null);
-        setError11(true);
-      });
+    if (RUN_ATTACK_11) {
+      void RUN_ATTACK_11()
+        .then((r) => {
+          setReport11(r);
+          setError11(false);
+        })
+        .catch(() => {
+          setReport11(null);
+          setError11(true);
+        });
+    }
+    if (RUN_ATTACK_12) {
+      void RUN_ATTACK_12()
+        .then((r) => {
+          setReport12(r);
+          setError12(false);
+        })
+        .catch(() => {
+          setReport12(null);
+          setError12(true);
+        });
+    }
   }, []);
 
   const killed = FINAL_VERDICT.claim_reprise_sure === "tue";
+  const has12 = Boolean(RUN_ATTACK_12);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
@@ -137,6 +158,57 @@ function VerdictPage() {
         </article>
       ) : null}
 
+      {has12 ? (
+        <article className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+            1.2 autre notaire
+          </p>
+          <h2 className="mt-3 font-display text-3xl tracking-tight">
+            À côté de V0. Pas à sa place.
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
+            Troisième notaire, live. Il ne réécrit pas le gel et ne ferme pas{" "}
+            {FINAL_VERDICT.premier_contre_exemple} sur 1.0. Reprise sûre V0 :
+            tuée.
+          </p>
+          {report12 ? (
+            <>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Badge tone={report12.projectClaim === "tuee" ? "corrompu" : "partiel"}>
+                  Claim 1.2 : {report12.projectClaim === "tuee" ? "tué" : "tenu sur ce corpus"}
+                </Badge>
+                <Badge tone="corrompu">V0 : tué</Badge>
+                <Badge tone="default">
+                  Ruleset {report12.ruleset ?? "1.2"}
+                </Badge>
+              </div>
+              <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat
+                  label="Kills"
+                  value={String(report12.nKills)}
+                  tone={report12.nKills > 0 ? "corrompu" : undefined}
+                />
+                <Stat
+                  label="Faux REPRENABLE"
+                  value={`${report12.nFalseReprenable}/${report12.n}`}
+                  tone={report12.nFalseReprenable > 0 ? "corrompu" : undefined}
+                />
+                <Stat label="Contrôles" value={`${report12.nControlOk}/2`} />
+                <Stat
+                  label="Contre-exemple"
+                  value={report12.killer?.attack.id ?? "aucun"}
+                />
+              </dl>
+              <p className="mt-6 font-mono text-xs text-subtle">{report12.sentence}</p>
+            </>
+          ) : (
+            <p className="mt-6 font-mono text-xs text-subtle">
+              {error12 ? "Banc 1.2 illisible. Aucun chiffre inventé." : "Banc 1.2 en cours."}
+            </p>
+          )}
+        </article>
+      ) : null}
+
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <Card
           title="On garde"
@@ -168,7 +240,12 @@ function VerdictPage() {
       </div>
 
       <p className="mt-10 max-w-2xl text-sm text-muted-foreground">
-        {RUN_ATTACK_11 ? (
+        {has12 ? (
+          <>
+            Les rulesets 1.1 et 1.2 sont d'autres notaires, <em>à côté</em> de
+            1.0. V0 n'est pas retuné. Reprise sûre 1.0 : tuée.
+          </>
+        ) : RUN_ATTACK_11 ? (
           <>
             Le ruleset 1.1 est un autre notaire, <em>à côté</em> de 1.0. V0
             n'est pas retuné. Reprise sûre 1.0 : tuée.

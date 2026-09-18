@@ -37,4 +37,31 @@ describe("gate-graph", () => {
     const out = (await gated({ packet: kfp.packet })) as LangGraphCommand;
     assert.equal(readGoto(out), "executor");
   });
+
+  it("gateNode ruleset 1.0 on KFP-001: still goto executor", async () => {
+    const gated = gateNode("planner", node, { ruleset: "1.0" });
+    const out = (await gated({ packet: kfp.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), "executor");
+  });
+
+  it("gateNode ruleset 1.1 on KFP-001: goto LANGGRAPH_END", async () => {
+    const gated = gateNode("planner", node, { ruleset: "1.1" });
+    const out = (await gated({ packet: kfp.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), LANGGRAPH_END);
+    assert.equal(out.update?.continuation_gate, "STOP");
+    assert.equal(out.update?.continuation_verdict, "CORROMPU");
+  });
+
+  it("gateNode ruleset 1.1 on CTL-FAIL-TOKEN: still goto LANGGRAPH_END", async () => {
+    const gated = gateNode("planner", node, { ruleset: "1.1" });
+    const out = (await gated({ packet: fail.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), LANGGRAPH_END);
+  });
+
+  it("wrapNode never judges: KFP-001 still goto executor (observer)", async () => {
+    const wrapped = wrapNode("planner", node);
+    const out = (await wrapped({ packet: kfp.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), "executor");
+    assert.equal(out.update?.continuation_gate, undefined);
+  });
 });

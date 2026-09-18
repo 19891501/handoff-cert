@@ -1,5 +1,5 @@
 /** RFC 8785 JSON Canonicalization Scheme — subset for JSON data (no BigInt).
- *  Key order is UTF-16 code units, never localeCompare. */
+ *  Strings are Unicode NFC before serialization. Key order is UTF-16 code units, never localeCompare. */
 
 export function jcs(value: unknown): string {
   if (value === null || typeof value === "boolean") return JSON.stringify(value);
@@ -7,7 +7,7 @@ export function jcs(value: unknown): string {
     if (!Number.isFinite(value)) throw new TypeError("JCS refuse NaN et Infinity");
     return JSON.stringify(value);
   }
-  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "string") return JSON.stringify(nfc(value));
   if (typeof value === "bigint") throw new TypeError("JCS refuse bigint");
   if (Array.isArray(value)) {
     return `[${value.map((item) => (item === undefined ? "null" : jcs(item))).join(",")}]`;
@@ -16,8 +16,8 @@ export function jcs(value: unknown): string {
     const rec = value as Record<string, unknown>;
     const keys = Object.keys(rec)
       .filter((k) => rec[k] !== undefined)
-      .sort(compareUtf16);
-    return `{${keys.map((k) => `${JSON.stringify(k)}:${jcs(rec[k])}`).join(",")}}`;
+      .sort((a, b) => compareUtf16(nfc(a), nfc(b)));
+    return `{${keys.map((k) => `${JSON.stringify(nfc(k))}:${jcs(rec[k])}`).join(",")}}`;
   }
   throw new TypeError("JCS: type non JSON");
 }
