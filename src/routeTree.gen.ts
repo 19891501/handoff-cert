@@ -30,6 +30,9 @@ import { Route as TestsRouteImport } from './routes/tests'
 import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as TraceRouteImport } from './routes/trace'
 import { Route as ApiV1CertifyRouteImport } from './routes/api/v1/certify'
+import { Route as ApiX402IndexRouteImport } from './routes/api/x402/index'
+import { Route as ApiX402SettleRouteImport } from './routes/api/x402/settle'
+import { Route as ApiX402VerifyRouteImport } from './routes/api/x402/verify'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -136,6 +139,21 @@ const ApiV1CertifyRoute = ApiV1CertifyRouteImport.update({
   path: '/api/v1/certify',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiX402IndexRoute = ApiX402IndexRouteImport.update({
+  id: '/api/x402/',
+  path: '/api/x402/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiX402SettleRoute = ApiX402SettleRouteImport.update({
+  id: '/api/x402/settle',
+  path: '/api/x402/settle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiX402VerifyRoute = ApiX402VerifyRouteImport.update({
+  id: '/api/x402/verify',
+  path: '/api/x402/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -159,6 +177,9 @@ export interface FileRoutesByFullPath {
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
+  '/api/x402/settle': typeof ApiX402SettleRoute
+  '/api/x402/verify': typeof ApiX402VerifyRoute
+  '/api/x402/': typeof ApiX402IndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -182,6 +203,9 @@ export interface FileRoutesByTo {
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
+  '/api/x402/settle': typeof ApiX402SettleRoute
+  '/api/x402/verify': typeof ApiX402VerifyRoute
+  '/api/x402': typeof ApiX402IndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -206,6 +230,9 @@ export interface FileRoutesById {
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
+  '/api/x402/settle': typeof ApiX402SettleRoute
+  '/api/x402/verify': typeof ApiX402VerifyRoute
+  '/api/x402/': typeof ApiX402IndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -231,6 +258,9 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/trace'
     | '/api/v1/certify'
+    | '/api/x402/settle'
+    | '/api/x402/verify'
+    | '/api/x402/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -254,6 +284,9 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/trace'
     | '/api/v1/certify'
+    | '/api/x402/settle'
+    | '/api/x402/verify'
+    | '/api/x402'
   id:
     | '__root__'
     | '/'
@@ -277,6 +310,9 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/trace'
     | '/api/v1/certify'
+    | '/api/x402/settle'
+    | '/api/x402/verify'
+    | '/api/x402/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -301,6 +337,9 @@ export interface RootRouteChildren {
   TokensRoute: typeof TokensRoute
   TraceRoute: typeof TraceRoute
   ApiV1CertifyRoute: typeof ApiV1CertifyRoute
+  ApiX402SettleRoute: typeof ApiX402SettleRoute
+  ApiX402VerifyRoute: typeof ApiX402VerifyRoute
+  ApiX402IndexRoute: typeof ApiX402IndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -452,6 +491,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiV1CertifyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/x402/': {
+      id: '/api/x402/'
+      path: '/api/x402'
+      fullPath: '/api/x402/'
+      preLoaderRoute: typeof ApiX402IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/x402/settle': {
+      id: '/api/x402/settle'
+      path: '/api/x402/settle'
+      fullPath: '/api/x402/settle'
+      preLoaderRoute: typeof ApiX402SettleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/x402/verify': {
+      id: '/api/x402/verify'
+      path: '/api/x402/verify'
+      fullPath: '/api/x402/verify'
+      preLoaderRoute: typeof ApiX402VerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -477,6 +537,9 @@ const rootRouteChildren: RootRouteChildren = {
   TokensRoute: TokensRoute,
   TraceRoute: TraceRoute,
   ApiV1CertifyRoute: ApiV1CertifyRoute,
+  ApiX402SettleRoute: ApiX402SettleRoute,
+  ApiX402VerifyRoute: ApiX402VerifyRoute,
+  ApiX402IndexRoute: ApiX402IndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

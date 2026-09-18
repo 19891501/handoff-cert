@@ -71,8 +71,11 @@ function OffrePage() {
             <Badge tone="partiel">{OFFER.billing}</Badge>
           </p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Le prix est public. Le règlement n'est pas branché. Pas de 402
-            décoratif.
+            Prix public. Facilitateur x402 :{" "}
+            <span className="font-mono text-xs">/api/x402</span> (Base
+            Sepolia). POST sans <span className="font-mono text-xs">X-PAYMENT</span>{" "}
+            → 402 seulement si <span className="font-mono text-xs">X402_PAY_TO</span>{" "}
+            est configuré. Pas de hash inventé.
           </p>
         </article>
       </div>

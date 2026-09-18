@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { OFFER } from "@/lib/offer/catalog";
 import { serveCertify } from "@/lib/offer/serve";
+import {
+  AMOUNT_ATOMIC,
+  X402_NETWORK,
+  enforced,
+  gateCertify,
+  payTo,
+  requirements,
+} from "@/lib/offer/x402";
 
 export const Route = createFileRoute("/api/v1/certify")({
   server: {
@@ -10,10 +18,22 @@ export const Route = createFileRoute("/api/v1/certify")({
           sku: OFFER.sku,
           endpoint: OFFER.endpoint,
           price_eur: OFFER.price_eur,
-          billing: OFFER.billing,
+          billing: enforced() ? "x402" : OFFER.billing,
           method: "POST",
+          x402: {
+            network: X402_NETWORK,
+            amount: AMOUNT_ATOMIC,
+            payTo: payTo(),
+            enforced: enforced(),
+            facilitator: "/api/x402",
+            accepts: [requirements()],
+          },
         }),
       POST: async ({ request }) => {
+        const gate = await gateCertify(request);
+        if (!gate.ok) {
+          return Response.json(gate.body, { status: 402 });
+        }
         let body: unknown = {};
         try {
           body = await request.json();
@@ -22,7 +42,16 @@ export const Route = createFileRoute("/api/v1/certify")({
         }
         try {
           const result = await serveCertify(body);
-          return Response.json(result);
+          return Response.json({
+            ...result,
+            offer: {
+              ...result.offer,
+              billing: enforced() ? "x402" : result.offer.billing,
+            },
+            payment: enforced()
+              ? { payer: gate.payer, transaction: gate.transaction, network: X402_NETWORK }
+              : { billing: "preview" },
+          });
         } catch (e) {
           return Response.json(
             { erreur: e instanceof Error ? e.message : "certification impossible" },

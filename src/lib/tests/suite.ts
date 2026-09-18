@@ -23,6 +23,17 @@ import { CLAIM_ONLY_OK, STATUS_ONLY, statusPolarity } from "../bench/tokens.ts";
 import { OFFER } from "../offer/catalog.ts";
 import { serveCertify } from "../offer/serve.ts";
 import { getCase } from "../handoff/cases.ts";
+import {
+  AMOUNT_ATOMIC,
+  forgetNonce,
+  paymentRequiredBody,
+  parsePaymentHeader,
+  requirements,
+  settlePayment,
+  signExact,
+  verifyPayment,
+} from "../offer/x402.ts";
+import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
 export interface CheckResult {
   id: string;
@@ -242,6 +253,30 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(statusPolarity("PASS"), "ok", "PASS");
     eq(statusPolarity("cancelled"), "fail", "cancelled");
     eq(statusPolarity(""), "none", "vide");
+  });
+
+  await check("x402", "facilitator", "signature EIP-3009 acceptée, montant faux refusé, settle sans clé honnête", async () => {
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const ok = await verifyPayment(payload, reqs);
+    eq(ok.isValid, true, "valid");
+    eq(ok.payer?.toLowerCase(), payer.address.toLowerCase(), "payer");
+    const bad = await signExact(payer, merchant, "1");
+    const no = await verifyPayment(bad, reqs);
+    eq(no.isValid, false, "amount");
+    eq(no.invalidReason, "amount_mismatch", "reason");
+    const settled = await settlePayment(payload, reqs);
+    eq(settled.success, false, "pas de clé");
+    eq(settled.errorReason, "no_settler_key", "honnête");
+    eq(settled.transaction, "", "pas de hash fantôme");
+    forgetNonce(payload.payload.authorization.nonce);
+    const replayBody = paymentRequiredBody("X-PAYMENT header is required");
+    eq(replayBody.x402Version, 1, "v1");
+    eq(replayBody.accepts[0]?.maxAmountRequired, AMOUNT_ATOMIC, "atomic");
+    const parsed = parsePaymentHeader(JSON.stringify(payload));
+    eq(parsed?.payload.authorization.from.toLowerCase(), payer.address.toLowerCase(), "header");
   });
 
   for (const c of BENCH_CASES) {

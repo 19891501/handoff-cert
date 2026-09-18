@@ -40,7 +40,23 @@ Réponse : deux couches, jamais fusionnées.
 }
 ```
 
-SKU `handoff-cert-v1` · **0,001 € / certificat** · facturation `preview` (prix public, règlement non branché).
+SKU `handoff-cert-v1` · **0,001 € / certificat** · facturation `preview` tant que `X402_PAY_TO` n’est pas posé.
+
+## x402 (Base Sepolia)
+
+Facilitateur local, spec v1 `exact` / EIP-3009 USDC.
+
+```
+GET  /api/x402
+POST /api/x402/verify
+POST /api/x402/settle
+```
+
+- Sans `X-PAYMENT` : certify reste 200 (preview) si `X402_PAY_TO` est vide.
+- Avec `X402_PAY_TO=0x…` : POST `/api/v1/certify` exige un paiement ; 402 sinon.
+- `X402_SETTLER_KEY` : clé qui soumet `transferWithAuthorization`. Absente → `no_settler_key`, **pas** de hash inventé.
+
+1000 atomic = 0,001 USDC testnet.
 
 Insertion LangGraph : `wrapNode` autour de `Command.goto` seulement.
 
