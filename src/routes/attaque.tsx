@@ -2,23 +2,49 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { runAttack, runResetAB, type AttackReport, type ResetAB } from "@/lib/bench/attack";
+import {
+  runAttack,
+  runAttack11,
+  runResetAB,
+  type AttackReport,
+  type ResetAB,
+} from "@/lib/bench/attack";
 import { RESET_PROTOCOL } from "@/lib/bench/falsify";
 import { pretty } from "@/lib/utils";
 
 export const Route = createFileRoute("/attaque")({ component: AttaquePage });
 
+function getRunAttack11(): (() => Promise<AttackReport>) | null {
+  return runAttack11;
+}
+
+const RUN_ATTACK_11 = getRunAttack11();
+
 function AttaquePage() {
   const [report, setReport] = useState<AttackReport | null>(null);
+  const [report11, setReport11] = useState<AttackReport | null>(null);
+  const [error11, setError11] = useState(false);
   const [reset, setReset] = useState<ResetAB | null>(null);
   const [busy, setBusy] = useState(false);
 
   async function run() {
     setBusy(true);
+    setError11(false);
     const next = await runAttack();
     setReport(next);
     if (next.killer) setReset(await runResetAB(next.killer.attack.packet));
     else setReset(null);
+
+    if (RUN_ATTACK_11) {
+      try {
+        setReport11(await RUN_ATTACK_11());
+      } catch {
+        setReport11(null);
+        setError11(true);
+      }
+    } else {
+      setReport11(null);
+    }
     setBusy(false);
   }
 
@@ -27,17 +53,20 @@ function AttaquePage() {
   }, []);
 
   const killed = report?.projectClaim === "tuee";
+  const has11 = Boolean(RUN_ATTACK_11);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
       <p className="text-xs font-medium uppercase tracking-[0.22em] text-subtle">
-        CERT+GATE · Reset A→B · juge gelé
+        {has11
+          ? "CERT+GATE · deux notaires · V0 gelé"
+          : "CERT+GATE · Reset A→B · juge gelé"}
       </p>
       <h1 className="mt-2 font-display text-4xl tracking-tight">Attaque</h1>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Prouve que le couple empêche une reprise dangereuse — ou publie le
-        contre-exemple qui tue le claim. wrapNode observe. gateNode juge. V0
-        n'est pas retuné.
+        {has11
+          ? "Deux notaires, même corpus. V0 / GATE 1.0 : claim tué. 1.1 n'est pas un patch du gel. KFP-001 reste ouvert sur 1.0."
+          : "Prouve que le couple empêche une reprise dangereuse — ou publie le contre-exemple qui tue le claim. wrapNode observe. gateNode juge. V0 n'est pas retuné."}
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -46,38 +75,78 @@ function AttaquePage() {
         </Button>
         {report ? (
           <Badge tone={killed ? "corrompu" : "reprenable"}>
-            {killed ? "Claim tué" : "Claim tenu sur ce corpus"}
+            {has11
+              ? killed
+                ? "V0 : claim tué"
+                : "V0 : claim tenu sur ce corpus"
+              : killed
+                ? "Claim tué"
+                : "Claim tenu sur ce corpus"}
+          </Badge>
+        ) : null}
+        {has11 && report11 ? (
+          <Badge tone={report11.projectClaim === "tuee" ? "corrompu" : "partiel"}>
+            {report11.projectClaim === "tuee"
+              ? "1.1 : claim tué"
+              : "1.1 : tenu sur ce corpus"}
           </Badge>
         ) : null}
       </div>
 
       {report ? (
         <>
-          <article className="mt-8 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-              Verdict de l'expérience
-            </p>
-            <h2 className="mt-3 font-display text-3xl tracking-tight">
-              {killed ? "Le couple ne tient pas." : "Pas de kill sur ce corpus."}
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{report.sentence}</p>
-            <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Attaques" value={String(report.n)} />
-              <Stat label="Faux REPRENABLE" value={String(report.nFalseReprenable)} tone="corrompu" />
-              <Stat label="Kills" value={String(report.nKills)} tone="corrompu" />
-              <Stat label="Contrôles ok" value={`${report.nControlOk}/2`} />
-            </dl>
-          </article>
+          <div className={has11 ? "mt-8 grid gap-4 lg:grid-cols-2" : "mt-8"}>
+            <NotaryCard
+              eyebrow={has11 ? "V0 / GATE 1.0" : "Verdict de l'expérience"}
+              heading={killed ? "Le couple ne tient pas." : "Pas de kill sur ce corpus."}
+              body={
+                has11
+                  ? `${report.sentence} KFP-001 n'est pas fermé sur 1.0.`
+                  : report.sentence
+              }
+              report={report}
+            />
+            {has11 ? (
+              report11 ? (
+                <NotaryCard
+                  eyebrow="Ruleset 1.1 (autre notaire)"
+                  heading={
+                    report11.projectClaim === "tuee"
+                      ? "Le notaire 1.1 ne tient pas non plus."
+                      : "Pas de kill 1.1 sur ce corpus."
+                  }
+                  body={
+                    report11.projectClaim === "tuee"
+                      ? `${report11.sentence} Cela ne réécrit pas V0.`
+                      : `${report11.sentence} Cela ne ferme pas KFP-001 sur V0.`
+                  }
+                  report={report11}
+                />
+              ) : (
+                <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+                    Ruleset 1.1 (autre notaire)
+                  </p>
+                  <p className="mt-4 font-mono text-xs text-subtle">
+                    {error11
+                      ? "Banc 1.1 illisible. Aucun chiffre inventé."
+                      : "Banc 1.1 en cours."}
+                  </p>
+                </article>
+              )
+            ) : null}
+          </div>
 
           {report.killer ? (
             <article className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-                Premier contre-exemple
+                {has11 ? "Premier contre-exemple · V0" : "Premier contre-exemple"}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="font-mono text-sm">{report.killer.attack.id}</span>
                 <Badge tone="corrompu">kill</Badge>
                 <Badge tone="default">{report.killer.attack.vector}</Badge>
+                {has11 ? <Badge tone="corrompu">ouvert sur 1.0</Badge> : null}
               </div>
               <h3 className="mt-3 font-display text-2xl tracking-tight">
                 {report.killer.attack.title}
@@ -111,36 +180,38 @@ function AttaquePage() {
             </article>
           ) : null}
 
-          <section className="mt-10">
-            <h2 className="font-display text-2xl tracking-tight">Scoreboard</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir.
-              Kill = le monde est CORROMPU et B part quand même.
-            </p>
-            <div className="mt-6 space-y-3">
-              {report.rows.map((r) => (
-                <article
-                  key={r.attack.id}
-                  className="rounded-xl bg-card px-4 py-4 shadow-[var(--shadow-border)] sm:px-5"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs">{r.attack.id}</span>
-                    <Badge tone={r.kills ? "corrompu" : r.falseReprenable ? "partiel" : "default"}>
-                      {r.kills ? "kill" : r.falseReprenable ? "faux R" : r.attack.danger}
-                    </Badge>
-                    <Badge tone={r.gate.decision === "PASS" ? "reprenable" : "corrompu"}>
-                      GATE {r.gate.decision}
-                    </Badge>
-                    <Badge tone="default">
-                      {r.attack.world} → {r.gate.verdict}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm">{r.attack.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{r.attack.why}</p>
-                </article>
-              ))}
+          {has11 ? (
+            <div className="mt-10 grid gap-10 lg:grid-cols-2">
+              <Scoreboard
+                title="Scoreboard V0 / GATE 1.0"
+                blurb="Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir. Kill = le monde est CORROMPU et B part quand même. Claim tué."
+                report={report}
+              />
+              {report11 ? (
+                <Scoreboard
+                  title="Scoreboard ruleset 1.1"
+                  blurb="Autre notaire, même attaques. Un score 1.1 ne ferme pas KFP-001 sur V0."
+                  report={report11}
+                />
+              ) : (
+                <section>
+                  <h2 className="font-display text-2xl tracking-tight">Scoreboard ruleset 1.1</h2>
+                  <p className="mt-2 font-mono text-xs text-subtle">
+                    {error11
+                      ? "Banc 1.1 illisible. Aucun chiffre inventé."
+                      : "Banc 1.1 en cours."}
+                  </p>
+                </section>
+              )}
             </div>
-          </section>
+          ) : (
+            <Scoreboard
+              title="Scoreboard"
+              blurb="Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir. Kill = le monde est CORROMPU et B part quand même."
+              report={report}
+              className="mt-10"
+            />
+          )}
 
           <section className="mt-12 max-w-2xl">
             <h2 className="font-display text-2xl tracking-tight">Reset A→B</h2>
@@ -166,6 +237,84 @@ function AttaquePage() {
         </>
       ) : null}
     </div>
+  );
+}
+
+function NotaryCard({
+  eyebrow,
+  heading,
+  body,
+  report,
+}: {
+  eyebrow: string;
+  heading: string;
+  body: string;
+  report: AttackReport;
+}) {
+  return (
+    <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+        {eyebrow}
+      </p>
+      <h2 className="mt-3 font-display text-3xl tracking-tight">{heading}</h2>
+      <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{body}</p>
+      <dl className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Attaques" value={String(report.n)} />
+        <Stat
+          label="Faux REPRENABLE"
+          value={String(report.nFalseReprenable)}
+          tone={report.nFalseReprenable > 0 ? "corrompu" : undefined}
+        />
+        <Stat
+          label="Kills"
+          value={String(report.nKills)}
+          tone={report.nKills > 0 ? "corrompu" : undefined}
+        />
+        <Stat label="Contrôles ok" value={`${report.nControlOk}/2`} />
+      </dl>
+    </article>
+  );
+}
+
+function Scoreboard({
+  title,
+  blurb,
+  report,
+  className,
+}: {
+  title: string;
+  blurb: string;
+  report: AttackReport;
+  className?: string;
+}) {
+  return (
+    <section className={className}>
+      <h2 className="font-display text-2xl tracking-tight">{title}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">{blurb}</p>
+      <div className="mt-6 space-y-3">
+        {report.rows.map((r) => (
+          <article
+            key={r.attack.id}
+            className="rounded-xl bg-card px-4 py-4 shadow-[var(--shadow-border)] sm:px-5"
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs">{r.attack.id}</span>
+              <Badge tone={r.kills ? "corrompu" : r.falseReprenable ? "partiel" : "default"}>
+                {r.kills ? "kill" : r.falseReprenable ? "faux R" : r.attack.danger}
+              </Badge>
+              <Badge tone={r.gate.decision === "PASS" ? "reprenable" : "corrompu"}>
+                GATE {r.gate.decision}
+              </Badge>
+              <Badge tone="default">
+                {r.attack.world} → {r.gate.verdict}
+              </Badge>
+            </div>
+            <p className="mt-2 text-sm">{r.attack.title}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{r.attack.why}</p>
+          </article>
+        ))}
+      </div>
+    </section>
   );
 }
 

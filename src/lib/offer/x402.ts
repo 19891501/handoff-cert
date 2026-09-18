@@ -225,7 +225,7 @@ export async function verifyPayment(
     return { isValid: false, invalidReason: "window_expired" };
   }
   const seen = await ledger.get(paymentPayload.network, auth.from, auth.nonce);
-  if (seen?.transaction) {
+  if (seen) {
     return { isValid: false, payer: auth.from, invalidReason: "nonce_replay" };
   }
 
@@ -339,6 +339,22 @@ export async function settlePayment(
     client,
   });
   try {
+    const reserved = await ledger.put(
+      paymentPayload.network,
+      auth.from,
+      auth.nonce,
+      paymentRequirements.asset,
+      "",
+    );
+    if (reserved.transaction) {
+      return {
+        success: true,
+        payer: verified.payer,
+        transaction: reserved.transaction,
+        network: X402_NETWORK,
+        replay: true,
+      };
+    }
     const hash = await usdc.write.transferWithAuthorization([
       auth.from,
       auth.to,
@@ -355,6 +371,15 @@ export async function settlePayment(
       paymentRequirements.asset,
       hash,
     );
+    if (!stored.transaction) {
+      return {
+        success: false,
+        payer: verified.payer,
+        transaction: "",
+        network: X402_NETWORK,
+        errorReason: "settle_failed",
+      };
+    }
     return {
       success: true,
       payer: verified.payer,

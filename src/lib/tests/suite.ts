@@ -18,7 +18,7 @@ import { BENCH_CASES } from "../handoff/cases.ts";
 import { certify } from "../handoff/engine.ts";
 import { CORPUS_CASES } from "../handoff/corpus.ts";
 import { KNOWN_FALSE, RESET_PROTOCOL, scanKnownFalse } from "../bench/falsify.ts";
-import { attackCorpus, runAttack, runResetAB } from "../bench/attack.ts";
+import { attackCorpus, runAttack, runAttack11, runResetAB } from "../bench/attack.ts";
 import { FAILURE_CLASSES } from "../bench/classes.ts";
 import { scanText, scanValue } from "../bench/markers.ts";
 import { ENGINE_FIXTURES, traceEngine } from "../bench/engine-trace.ts";
@@ -27,7 +27,8 @@ import { CLAIM_ONLY_OK, STATUS_ONLY, statusPolarity } from "../bench/tokens.ts";
 import { OFFER } from "../offer/catalog.ts";
 import { serveCertify } from "../offer/serve.ts";
 import { getCase } from "../handoff/cases.ts";
-import { FINAL_VERDICT } from "../bench/verdict.ts";
+import { FINAL_VERDICT, ATTACK_11_NOTE } from "../bench/verdict.ts";
+import { gateResume } from "../bench/gate.ts";
 import {
   AMOUNT_ATOMIC,
   admitPayment,
@@ -294,6 +295,40 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(FINAL_VERDICT.produit_facture, "non", "sku");
   });
 
+  await check("Attaque", "Attaque-11-1.0-gel", "1.1 n'altère pas le scoreboard 1.0", async () => {
+    const report = await runAttack();
+    eq(report.ruleset, "1.0", "ruleset");
+    eq(report.nKills, 4, "kills");
+    eq(report.nFalseReprenable, 7, "faux");
+    eq(report.n, 9, "n");
+    eq(report.killer?.attack.id ?? "", "KFP-001", "killer");
+    eq(FINAL_VERDICT.kills, 4, "gel kills");
+  });
+
+  await check("Attaque", "Attaque-11-kfp001", "1.1 STOP sur KFP-001 ; 1.0 PASS", async () => {
+    const kfp = attackCorpus().find((a) => a.id === "KFP-001");
+    if (!kfp) fail("KFP-001 absent");
+    const g10 = await gateResume(kfp.packet, "1.0");
+    eq(g10.decision, "PASS", "1.0");
+    eq(g10.verdict, "REPRENABLE", "v0");
+    eq(g10.ruleset, "1.0", "r10");
+    const g11 = await gateResume(kfp.packet, "1.1");
+    eq(g11.decision, "STOP", "1.1");
+    eq(g11.verdict, "CORROMPU", "v11");
+    eq(g11.ruleset, "1.1", "r11");
+  });
+
+  await check("Attaque", "Attaque-11-scoreboard", "runAttack11 aligne ATTACK_11_NOTE, hors gel 1.0", async () => {
+    const r11 = await runAttack11();
+    eq(r11.ruleset, "1.1", "ruleset");
+    eq(r11.n, ATTACK_11_NOTE.attack11_n, "n");
+    eq(r11.nKills, ATTACK_11_NOTE.attack11_kills, "kills");
+    eq(r11.nFalseReprenable, ATTACK_11_NOTE.attack11_faux_reprenable, "faux");
+    eq(r11.nControlOk, 2, "ctl");
+    eq(r11.killer?.attack.id ?? "", ATTACK_11_NOTE.attack11_killer, "killer");
+    eq(FINAL_VERDICT.kills, 4, "gel 1.0 intact");
+  });
+
   await check("Falsification", "classes-occupancy", "4 classes occupées, parent vide", () => {
     const occupied = FAILURE_CLASSES.filter((c) => c.kfp);
     eq(occupied.length, 4, "occupées");
@@ -476,6 +511,91 @@ export async function runSuite(): Promise<CheckResult[]> {
       critical,
     );
   }
+
+  await check("x402", "pending-not-phantom", "pending empty tx is not a phantom success hash", async () => {
+    const book = memoryLedger();
+    installNonceLedger(book);
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const auth = payload.payload.authorization;
+    const pending = await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "");
+    eq(pending.transaction, "", "pending vide");
+    const got = await book.get(payload.network, auth.from, auth.nonce);
+    eq(got !== null, true, "pending existe");
+    eq(got?.transaction, "", "pas un hash");
+    const settled = await settlePayment(payload, reqs);
+    eq(settled.success, false, "pending ≠ succès");
+    eq(settled.transaction, "", "pas de hash fantôme");
+    eq(settled.errorReason, "nonce_replay", "pending bloque");
+    const replayed = await verifyPayment(payload, reqs);
+    eq(replayed.isValid, false, "verify");
+    eq(replayed.invalidReason, "nonce_replay", "reason");
+    const hashed = await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "0xreal");
+    eq(hashed.transaction, "0xreal", "upgrade");
+    const again = await settlePayment(payload, reqs);
+    eq(again.success, true, "replay");
+    eq(again.transaction, "0xreal", "même tx");
+    eq(again.replay, true, "flag");
+    const admitted = await admitPayment(payload, reqs);
+    if (admitted.ok) fail("second CERTIFY");
+    eq(admitted.errorReason, "nonce_consumed", "consumed");
+    installNonceLedger(memoryLedger());
+  });
+
+  await check("x402", "pending-first-wins", "first-wins still works", async () => {
+    const mem = memoryLedger();
+    const first = await mem.put("base-sepolia", "0xP", "0xN", "0xasset", "0xaaa");
+    const second = await mem.put("base-sepolia", "0xP", "0xN", "0xasset", "0xbbb");
+    eq(first.transaction, "0xaaa", "insert");
+    eq(second.transaction, "0xaaa", "first-wins");
+    const mem2 = memoryLedger();
+    const pending = await mem2.put("base-sepolia", "0xQ", "0xM", "0xasset", "");
+    eq(pending.transaction, "", "pending");
+    const upgraded = await mem2.put("base-sepolia", "0xQ", "0xM", "0xasset", "0xccc");
+    const lost = await mem2.put("base-sepolia", "0xQ", "0xM", "0xasset", "0xddd");
+    eq(upgraded.transaction, "0xccc", "upgrade");
+    eq(lost.transaction, "0xccc", "first-wins after pending");
+    const store = new Map<string, { transaction: string; asset: string }>();
+    const k = (network: string, payer: string, nonce: string) => `${network}:${payer}:${nonce}`;
+    const sql: SqlLike = {
+      async query(text, params = []) {
+        if (/insert into x402_nonces/i.test(text)) {
+          const [network, payer, nonce, asset, transaction] = params as string[];
+          const id = k(network, payer, nonce);
+          if (store.has(id)) return [];
+          const row = { transaction, asset };
+          store.set(id, row);
+          return [row];
+        }
+        if (/update x402_nonces/i.test(text)) {
+          const [network, payer, nonce, transaction] = params as string[];
+          const row = store.get(k(network, payer, nonce));
+          if (!row || row.transaction) return [];
+          row.transaction = transaction;
+          return [{ ...row }];
+        }
+        if (/select tx_hash as transaction/i.test(text)) {
+          const [network, payer, nonce] = params as string[];
+          const row = store.get(k(network, payer, nonce));
+          return row ? [{ ...row }] : [];
+        }
+        throw new Error(`sql inattendue: ${text}`);
+      },
+    };
+    const book = sqlLedger(sql);
+    await book.put("base-sepolia", "0xR", "0xS", "0xasset", "");
+    const sqlFirst = await book.put("base-sepolia", "0xR", "0xS", "0xasset", "0xaaa");
+    const sqlAgain = await book.put("base-sepolia", "0xR", "0xS", "0xasset", "0xbbb");
+    eq(sqlFirst.transaction, "0xaaa", "sql upgrade");
+    eq(sqlAgain.transaction, "0xaaa", "sql first-wins");
+    const sqlGot = await book.get("base-sepolia", "0xR", "0xS");
+    eq(sqlGot?.transaction, "0xaaa", "sql get");
+    const phantom = await book.put("base-sepolia", "0xT", "0xU", "0xasset", "");
+    eq(phantom.transaction, "", "sql pending vide");
+    installNonceLedger(memoryLedger());
+  });
 
   return out;
 }

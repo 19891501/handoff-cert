@@ -17,3 +17,22 @@ export const FINAL_VERDICT = {
 } as const;
 
 export type FinalVerdict = typeof FINAL_VERDICT;
+
+/**
+ * Scoreboard 1.1 — autre notaire, à côté du gel 1.0.
+ * Ne remplace pas kills:4 / faux_reprenable:7 / attaques:9 / KFP-001.
+ * Mesuré par runAttack11() sur le même corpus.
+ */
+export const ATTACK_11_NOTE = {
+  ruleset: "1.1",
+  independent_of: "FINAL_VERDICT",
+  measured_by: "runAttack11",
+  attack11_n: 9,
+  attack11_kills: 1,
+  attack11_faux_reprenable: 4,
+  attack11_controles: "2/2",
+  attack11_killer: "ATK-TERMINATED",
+  note: "Booléens polarisés (KFP-001, ATK-BOOL-STATUS, ATK-PASS-PREFIX). terminated⊂termine survit. Gel 1.0 inchangé.",
+} as const;
+
+export type Attack11Note = typeof ATTACK_11_NOTE;

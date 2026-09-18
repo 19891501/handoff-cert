@@ -84,6 +84,10 @@ function OffrePage() {
         {OFFER.name}
       </h1>
       <p className="mt-3 max-w-2xl text-base text-muted-foreground">{OFFER.what}</p>
+      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        Le SKU certifie le ruleset 1.0 ; 1.1, s'il apparaît, est un notaire
+        expérimental non vendu — pas un patch silencieux.
+      </p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">

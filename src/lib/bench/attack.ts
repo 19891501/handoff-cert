@@ -1,7 +1,7 @@
 import { CORPUS_CASES } from "@/lib/handoff/corpus";
 import { getCase } from "@/lib/handoff/cases";
 import { KNOWN_FALSE } from "./falsify";
-import { gateResume, type GateDecision, type GateResult } from "./gate";
+import { gateResume, type GateDecision, type GateResult, type RulesetId } from "./gate";
 import type { Verdict } from "@/lib/handoff/types";
 
 const TS = "2026-04-20T12:00:00Z";
@@ -170,7 +170,7 @@ export interface AttackRow {
 
 export interface AttackReport {
   couple: "CERT+GATE";
-  ruleset: "1.0";
+  ruleset: RulesetId;
   n: number;
   nPass: number;
   nStop: number;
@@ -195,13 +195,7 @@ function classifyRow(attack: Attack, gate: GateResult): AttackRow {
   };
 }
 
-export async function runAttack(): Promise<AttackReport> {
-  const rows: AttackRow[] = [];
-  for (const attack of attackCorpus()) {
-    const gate = await gateResume(attack.packet);
-    rows.push(classifyRow(attack, gate));
-  }
-
+function assembleReport(rows: AttackRow[], ruleset: RulesetId): AttackReport {
   const nPass = rows.filter((r) => r.gate.decision === "PASS").length;
   const nStop = rows.filter((r) => r.gate.decision === "STOP").length;
   const nFalseReprenable = rows.filter((r) => r.falseReprenable).length;
@@ -215,14 +209,15 @@ export async function runAttack(): Promise<AttackReport> {
   rows.sort((a, b) => Number(b.kills) - Number(a.kills) || Number(b.falseReprenable) - Number(a.falseReprenable));
   const killer = rows.find((r) => r.kills) ?? null;
   const projectClaim: "tenue" | "tuee" = nKills > 0 ? "tuee" : "tenue";
+  const judgeLabel = ruleset === "1.1" ? "V1.1" : "V0";
   const sentence =
     projectClaim === "tuee"
-      ? `CONTRE-EXEMPLE : ${killer!.attack.id} — le monde est ${killer!.attack.world}, V0 dit ${killer!.gate.verdict}, la grille ${killer!.gate.decision}. CERT+GATE n'empêche pas la reprise dangereuse.`
+      ? `CONTRE-EXEMPLE : ${killer!.attack.id} — le monde est ${killer!.attack.world}, ${judgeLabel} dit ${killer!.gate.verdict}, la grille ${killer!.gate.decision}. CERT+GATE n'empêche pas la reprise dangereuse.`
       : "Aucun CORROMPU du monde n'a traversé la grille. Le claim tient sur ce corpus — pas au-delà.";
 
   return {
     couple: "CERT+GATE",
-    ruleset: "1.0",
+    ruleset,
     n: rows.length,
     nPass,
     nStop,
@@ -234,6 +229,25 @@ export async function runAttack(): Promise<AttackReport> {
     sentence,
     rows,
   };
+}
+
+export async function runAttack(): Promise<AttackReport> {
+  const rows: AttackRow[] = [];
+  for (const attack of attackCorpus()) {
+    const gate = await gateResume(attack.packet);
+    rows.push(classifyRow(attack, gate));
+  }
+  return assembleReport(rows, "1.0");
+}
+
+/** Same corpus through the 1.1 gate. Does not touch the 1.0 scoreboard. */
+export async function runAttack11(): Promise<AttackReport> {
+  const rows: AttackRow[] = [];
+  for (const attack of attackCorpus()) {
+    const gate = await gateResume(attack.packet, "1.1");
+    rows.push(classifyRow(attack, gate));
+  }
+  return assembleReport(rows, "1.1");
 }
 
 export interface ResetAB {

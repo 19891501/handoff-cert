@@ -11,6 +11,7 @@ create table if not exists x402_nonces (
   primary key (network, payer, nonce)
 )`;
 
+/** Empty `transaction` is pending (in-flight). Non-empty is settled. Absent is `null`. */
 export interface NonceRow {
   transaction: string;
   asset: string;
@@ -42,8 +43,14 @@ function asRow(
   fallback?: NonceRow,
 ): NonceRow | null {
   if (!raw) return fallback ?? null;
+  const tx =
+    typeof raw.transaction === "string"
+      ? raw.transaction
+      : typeof raw.tx_hash === "string"
+        ? raw.tx_hash
+        : "";
   return {
-    transaction: raw.transaction || raw.tx_hash || fallback?.transaction || "",
+    transaction: tx,
     asset: raw.asset || fallback?.asset || "",
   };
 }
@@ -63,7 +70,7 @@ export function memoryLedger(): NonceLedger {
       const key = id(network, payer, nonce);
       const existing = rows.get(key);
       if (existing?.transaction) return existing;
-      const row = { transaction, asset };
+      const row = { transaction, asset: existing?.asset || asset };
       rows.set(key, row);
       return row;
     },
@@ -101,7 +108,8 @@ export function sqlLedger(sql: SqlLike): NonceLedger {
          returning tx_hash as transaction, asset`,
         [n.network, n.payer, n.nonce, asset.toLowerCase(), transaction],
       );
-      if (inserted[0]) return asRow(inserted[0], { transaction, asset })!;
+      if (inserted[0]) return asRow(inserted[0])!;
+
       const existing = await sql.query<{
         transaction?: string;
         tx_hash?: string;
@@ -110,7 +118,33 @@ export function sqlLedger(sql: SqlLike): NonceLedger {
         "select tx_hash as transaction, asset from x402_nonces where network = $1 and payer = $2 and nonce = $3",
         [n.network, n.payer, n.nonce],
       );
-      return asRow(existing[0], { transaction, asset })!;
+      const row = asRow(existing[0]);
+      if (row?.transaction) return row;
+      if (transaction && row) {
+        const upgraded = await sql.query<{
+          transaction?: string;
+          tx_hash?: string;
+          asset: string;
+        }>(
+          `update x402_nonces
+              set tx_hash = $4
+            where network = $1 and payer = $2 and nonce = $3 and tx_hash = ''
+            returning tx_hash as transaction, asset`,
+          [n.network, n.payer, n.nonce, transaction],
+        );
+        if (upgraded[0]) return asRow(upgraded[0])!;
+        const again = await sql.query<{
+          transaction?: string;
+          tx_hash?: string;
+          asset: string;
+        }>(
+          "select tx_hash as transaction, asset from x402_nonces where network = $1 and payer = $2 and nonce = $3",
+          [n.network, n.payer, n.nonce],
+        );
+        const won = asRow(again[0]);
+        if (won?.transaction) return won;
+      }
+      return row ?? { transaction, asset };
     },
     async del(network, payer, nonce) {
       const n = norm(network, payer, nonce);

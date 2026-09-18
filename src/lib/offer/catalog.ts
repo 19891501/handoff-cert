@@ -13,6 +13,7 @@ export const OFFER = {
     "choix d'agent",
     "paiement d'équipe",
     "remplacement de workflow",
+    "ruleset 1.1",
   ],
 } as const;
 

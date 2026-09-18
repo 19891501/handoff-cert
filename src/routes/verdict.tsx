@@ -3,15 +3,37 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FINAL_VERDICT } from "@/lib/bench/verdict";
-import { runAttack, type AttackReport } from "@/lib/bench/attack";
+import {
+  runAttack,
+  runAttack11,
+  type AttackReport,
+} from "@/lib/bench/attack";
 
 export const Route = createFileRoute("/verdict")({ component: VerdictPage });
 
+function getRunAttack11(): (() => Promise<AttackReport>) | null {
+  return runAttack11;
+}
+
+const RUN_ATTACK_11 = getRunAttack11();
+
 function VerdictPage() {
   const [report, setReport] = useState<AttackReport | null>(null);
+  const [report11, setReport11] = useState<AttackReport | null>(null);
+  const [error11, setError11] = useState(false);
 
   useEffect(() => {
     void runAttack().then(setReport);
+    if (!RUN_ATTACK_11) return;
+    void RUN_ATTACK_11()
+      .then((r) => {
+        setReport11(r);
+        setError11(false);
+      })
+      .catch(() => {
+        setReport11(null);
+        setError11(true);
+      });
   }, []);
 
   const killed = FINAL_VERDICT.claim_reprise_sure === "tue";
@@ -64,6 +86,57 @@ function VerdictPage() {
         ) : null}
       </article>
 
+      {RUN_ATTACK_11 ? (
+        <article className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+            Ruleset 1.1 (autre notaire)
+          </p>
+          <h2 className="mt-3 font-display text-3xl tracking-tight">
+            À côté de V0. Pas à sa place.
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
+            Second notaire, live. Il ne réécrit pas le gel et ne ferme pas{" "}
+            {FINAL_VERDICT.premier_contre_exemple} sur 1.0. Reprise sûre V0 :
+            tuée.
+          </p>
+          {report11 ? (
+            <>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <Badge tone={report11.projectClaim === "tuee" ? "corrompu" : "partiel"}>
+                  Claim 1.1 : {report11.projectClaim === "tuee" ? "tué" : "tenu sur ce corpus"}
+                </Badge>
+                <Badge tone="corrompu">V0 : tué</Badge>
+                <Badge tone="default">
+                  Ruleset {report11.ruleset ?? "1.1"}
+                </Badge>
+              </div>
+              <dl className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Stat
+                  label="Kills"
+                  value={String(report11.nKills)}
+                  tone={report11.nKills > 0 ? "corrompu" : undefined}
+                />
+                <Stat
+                  label="Faux REPRENABLE"
+                  value={`${report11.nFalseReprenable}/${report11.n}`}
+                  tone={report11.nFalseReprenable > 0 ? "corrompu" : undefined}
+                />
+                <Stat label="Contrôles" value={`${report11.nControlOk}/2`} />
+                <Stat
+                  label="Contre-exemple"
+                  value={report11.killer?.attack.id ?? "aucun"}
+                />
+              </dl>
+              <p className="mt-6 font-mono text-xs text-subtle">{report11.sentence}</p>
+            </>
+          ) : (
+            <p className="mt-6 font-mono text-xs text-subtle">
+              {error11 ? "Banc 1.1 illisible. Aucun chiffre inventé." : "Banc 1.1 en cours."}
+            </p>
+          )}
+        </article>
+      ) : null}
+
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <Card
           title="On garde"
@@ -95,8 +168,17 @@ function VerdictPage() {
       </div>
 
       <p className="mt-10 max-w-2xl text-sm text-muted-foreground">
-        Décision restante, humaine : un ruleset 1.1 <em>à côté</em> de 1.0, ou
-        arrêter. Pas un troisième tour d'analyse.
+        {RUN_ATTACK_11 ? (
+          <>
+            Le ruleset 1.1 est un autre notaire, <em>à côté</em> de 1.0. V0
+            n'est pas retuné. Reprise sûre 1.0 : tuée.
+          </>
+        ) : (
+          <>
+            Décision restante, humaine : un ruleset 1.1 <em>à côté</em> de 1.0, ou
+            arrêter. Pas un troisième tour d'analyse.
+          </>
+        )}
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">

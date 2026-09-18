@@ -9,9 +9,13 @@ import { certify, getCase, type Certificate, type Verdict } from "@/lib/handoff"
 import { FEATURED_CASES } from "@/lib/handoff/cases";
 import { KNOWN_FALSE } from "@/lib/bench/falsify";
 import { FINAL_VERDICT } from "@/lib/bench/verdict";
+import * as attackMod from "@/lib/bench/attack";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: Home });
+
+const HAS_ATTACK_11 =
+  typeof (attackMod as Record<string, unknown>).runAttack11 === "function";
 
 function Home() {
   const [active, setActive] = useState<(typeof FEATURED_CASES)[number]>("clean_validation");
@@ -66,6 +70,16 @@ function Home() {
           Monde CORROMPU, V0 REPRENABLE, grille PASS. Contrôles lexique{" "}
           {FINAL_VERDICT.controles} : un token FAIL arrête encore B. Ce n'est
           pas suffisant. Lock KFP rouge. Pas de ruleset 1.1 déguisé.
+          {HAS_ATTACK_11 ? (
+            <>
+              {" "}
+              Autre notaire 1.1 : à côté de V0 —{" "}
+              <Link to="/attaque" className="underline-offset-4 hover:underline">
+                comparer au banc
+              </Link>
+              .
+            </>
+          ) : null}
         </p>
         <div className="mt-6 overflow-hidden rounded-lg bg-background/60">
           <table className="w-full text-sm">
