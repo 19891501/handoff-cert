@@ -3,7 +3,10 @@ import { adopt, verifyIncoming } from "../adopt/hook.ts";
 import { tamper } from "../adopt/hosts.ts";
 import {
   checkoutGraph,
+  gateNode,
   isHandoffCommand,
+  LANGGRAPH_END,
+  readGoto,
   runGraph,
   wrapNode,
 } from "../adopt/langgraph.ts";
@@ -14,7 +17,8 @@ import { hammingBits, SAMPLE_STATE, shaHex } from "../format/sha.ts";
 import { BENCH_CASES } from "../handoff/cases.ts";
 import { certify } from "../handoff/engine.ts";
 import { CORPUS_CASES } from "../handoff/corpus.ts";
-import { KNOWN_FALSE, scanKnownFalse } from "../bench/falsify.ts";
+import { KNOWN_FALSE, RESET_PROTOCOL, scanKnownFalse } from "../bench/falsify.ts";
+import { attackCorpus, runAttack, runResetAB } from "../bench/attack.ts";
 import { FAILURE_CLASSES } from "../bench/classes.ts";
 import { scanText, scanValue } from "../bench/markers.ts";
 import { ENGINE_FIXTURES, traceEngine } from "../bench/engine-trace.ts";
@@ -23,9 +27,12 @@ import { CLAIM_ONLY_OK, STATUS_ONLY, statusPolarity } from "../bench/tokens.ts";
 import { OFFER } from "../offer/catalog.ts";
 import { serveCertify } from "../offer/serve.ts";
 import { getCase } from "../handoff/cases.ts";
+import { FINAL_VERDICT } from "../bench/verdict.ts";
 import {
   AMOUNT_ATOMIC,
+  admitPayment,
   forgetNonce,
+  hostedRequirements,
   installNonceLedger,
   paymentRequiredBody,
   parsePaymentHeader,
@@ -228,6 +235,65 @@ export async function runSuite(): Promise<CheckResult[]> {
     }
   });
 
+  await check("Attaque", "claim-tuee", "CERT+GATE : le claim est tué par un kill", async () => {
+    const report = await runAttack();
+    eq(report.projectClaim, "tuee", "claim");
+    if (!report.killer) fail("pas de killer");
+    eq(report.killer.attack.id, "KFP-001", "premier contre-exemple");
+    eq(report.killer.gate.decision, "PASS", "grille");
+    eq(report.killer.gate.verdict, "REPRENABLE", "v0");
+    if (report.nKills < 1) fail("aucun kill");
+    if (report.nFalseReprenable < 4) fail("les 4 KFP doivent rester faux R");
+  });
+
+  await check("Attaque", "controle-lexique", "token FAIL arrête ; propre passe", async () => {
+    const report = await runAttack();
+    const stop = report.rows.find((r) => r.attack.id === "CTL-FAIL-TOKEN");
+    const pass = report.rows.find((r) => r.attack.id === "CTL-CLEAN");
+    if (!stop || !pass) fail("contrôles absents");
+    eq(stop.gate.decision, "STOP", "fail");
+    eq(stop.gate.verdict, "CORROMPU", "v0 fail");
+    eq(pass.gate.decision, "PASS", "clean");
+    eq(report.nControlOk, 2, "contrôles");
+  });
+
+  await check("Attaque", "reset-kfp001", "Reset A→B : historique effacé, B part quand même", async () => {
+    eq(RESET_PROTOCOL.run, true, "lancé");
+    const kfp = attackCorpus().find((a) => a.id === "KFP-001");
+    if (!kfp) fail("KFP-001 absent");
+    const reset = await runResetAB(kfp.packet);
+    eq(reset.history, "effacee", "reset");
+    eq(reset.b_continues, true, "B");
+    eq(reset.kind, "gate-mecanique", "pas un LLM");
+  });
+
+  await check("Attaque", "gate-node", "gateNode coupe le FAIL, laisse KFP-001 — wrapNode laisse les deux", async () => {
+    const fail = attackCorpus().find((a) => a.id === "CTL-FAIL-TOKEN")!;
+    const kfp = attackCorpus().find((a) => a.id === "KFP-001")!;
+    const node = () => ({ goto: "executor", update: { step: 1 } });
+    const outFail = (await gateNode("planner", node, { packetOf: () => fail.packet })({})) as {
+      goto?: unknown;
+    };
+    const outKfp = (await gateNode("planner", node, { packetOf: () => kfp.packet })({})) as {
+      goto?: unknown;
+    };
+    const outWrap = (await wrapNode("planner", node)({})) as { goto?: unknown };
+    eq(readGoto(outFail), LANGGRAPH_END, "FAIL → END");
+    eq(readGoto(outKfp), "executor", "KFP-001 passe la grille");
+    eq(readGoto(outWrap), "executor", "observateur");
+  });
+
+  await check("Verdict", "final-aligne", "gel du verdict = banc CERT+GATE", async () => {
+    const report = await runAttack();
+    eq(FINAL_VERDICT.claim_reprise_sure, "tue", "claim");
+    eq(FINAL_VERDICT.kills, report.nKills, "kills");
+    eq(FINAL_VERDICT.faux_reprenable, report.nFalseReprenable, "fauxR");
+    eq(FINAL_VERDICT.attaques, report.n, "n");
+    eq(FINAL_VERDICT.premier_contre_exemple, report.killer?.attack.id ?? "", "kfp");
+    eq(FINAL_VERDICT.laboratoire, "tenu", "labo");
+    eq(FINAL_VERDICT.produit_facture, "non", "sku");
+  });
+
   await check("Falsification", "classes-occupancy", "4 classes occupées, parent vide", () => {
     const occupied = FAILURE_CLASSES.filter((c) => c.kfp);
     eq(occupied.length, 4, "occupées");
@@ -309,6 +375,29 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(replayBody.accepts[0]?.maxAmountRequired, AMOUNT_ATOMIC, "atomic");
     const parsed = parsePaymentHeader(JSON.stringify(payload));
     eq(parsed?.payload.authorization.from.toLowerCase(), payer.address.toLowerCase(), "header");
+    const attacker = {
+      ...requirements(),
+      payTo: "0x0000000000000000000000000000000000000123" as typeof merchant,
+    };
+    eq(hostedRequirements().payTo, requirements().payTo, "V-01 serveur");
+    if (hostedRequirements().payTo.toLowerCase() === attacker.payTo.toLowerCase() && attacker.payTo !== requirements().payTo) {
+      fail("requirements client acceptés");
+    }
+  });
+
+  await check("x402", "admit-replay", "replay ≠ second certificat", async () => {
+    const book = memoryLedger();
+    installNonceLedger(book);
+    const payer = privateKeyToAccount(generatePrivateKey());
+    const merchant = privateKeyToAccount(generatePrivateKey()).address;
+    const reqs = { ...requirements(), payTo: merchant };
+    const payload = await signExact(payer, merchant);
+    const auth = payload.payload.authorization;
+    await book.put(payload.network, auth.from, auth.nonce, reqs.asset, "0xabc");
+    const admitted = await admitPayment(payload, reqs);
+    if (admitted.ok) fail("coupon");
+    eq(admitted.errorReason, "nonce_consumed", "consumed");
+    installNonceLedger(memoryLedger());
   });
 
   await check("x402", "ledger", "settle rejoué renvoie la même tx, verify voit nonce_replay", async () => {

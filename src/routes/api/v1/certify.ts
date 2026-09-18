@@ -40,15 +40,15 @@ export const Route = createFileRoute("/api/v1/certify")({
       },
       POST: async ({ request }) => {
         await ensureSqlLedger();
-        const gate = await gateCertify(request);
-        if (!gate.ok) {
-          return Response.json(gate.body, { status: 402 });
-        }
         let body: unknown = {};
         try {
           body = await request.json();
         } catch {
           return Response.json({ erreur: "JSON invalide" }, { status: 400 });
+        }
+        const gate = await gateCertify(request);
+        if (!gate.ok) {
+          return Response.json(gate.body, { status: 402 });
         }
         try {
           const result = await serveCertify(body);

@@ -1,4 +1,6 @@
-import { adopt, type AdoptResult } from "./hook";
+import { gateResume } from "@/lib/bench/gate";
+import type { AdoptResult } from "./hook";
+import { adopt } from "./hook";
 import type { ContinuationProof } from "@/lib/format/proof";
 
 export const LANGGRAPH_END = "__end__";
@@ -106,6 +108,57 @@ export function wrapNode<S extends Record<string, unknown>>(
     if (!isHandoffCommand(result)) return result;
     const sealed = await sealHandoff(nodeName, state, result, graph);
     return sealed.command;
+  };
+}
+
+/**
+ * Grille : certify() puis STOP si le verdict n'est pas REPRENABLE.
+ * wrapNode reste l'observateur (silence, pas de juge). gateNode est le couple attaqué.
+ */
+export function gateNode<S extends Record<string, unknown>>(
+  nodeName: string,
+  node: NodeFn<S>,
+  opts?: { graph?: string; packetOf?: (state: S) => unknown },
+): (state: S) => Promise<unknown> {
+  const graph = opts?.graph ?? "graph";
+  return async (state: S) => {
+    const result = await node(state);
+    if (!isHandoffCommand(result)) return result;
+    const sealed = await sealHandoff(nodeName, state, result, graph);
+    const packet =
+      opts?.packetOf?.(state) ??
+      (isRecord(state) ? (state.packet ?? state.handoff) : undefined);
+    if (packet === undefined || packet === null) {
+      return {
+        ...sealed.command,
+        goto: LANGGRAPH_END,
+        update: {
+          ...(sealed.command.update ?? {}),
+          continuation_gate: "STOP",
+          continuation_error: "paquet_absent",
+        },
+      };
+    }
+    const g = await gateResume(packet);
+    if (g.decision === "STOP") {
+      return {
+        ...sealed.command,
+        goto: LANGGRAPH_END,
+        update: {
+          ...(sealed.command.update ?? {}),
+          continuation_gate: "STOP",
+          continuation_verdict: g.verdict,
+        },
+      };
+    }
+    return {
+      ...sealed.command,
+      update: {
+        ...(sealed.command.update ?? {}),
+        continuation_gate: "PASS",
+        continuation_verdict: g.verdict,
+      },
+    };
   };
 }
 

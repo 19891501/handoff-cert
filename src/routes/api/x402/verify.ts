@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requirements, verifyPayment, type PaymentPayload, type PaymentRequirements } from "@/lib/offer/x402";
+import { hostedRequirements, verifyPayment, type PaymentPayload } from "@/lib/offer/x402";
 import { ensureSqlLedger } from "@/lib/offer/x402.server";
 
 export const Route = createFileRoute("/api/x402/verify")({
@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/x402/verify")({
     handlers: {
       POST: async ({ request }) => {
         await ensureSqlLedger();
-        let body: { paymentPayload?: PaymentPayload; paymentRequirements?: PaymentRequirements };
+        let body: { paymentPayload?: PaymentPayload };
         try {
           body = (await request.json()) as typeof body;
         } catch {
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/x402/verify")({
         if (!body.paymentPayload) {
           return Response.json({ isValid: false, invalidReason: "paymentPayload_missing" }, { status: 400 });
         }
-        const reqs = body.paymentRequirements ?? requirements();
+        const reqs = hostedRequirements();
         const result = await verifyPayment(body.paymentPayload, reqs);
         return Response.json(result);
       },

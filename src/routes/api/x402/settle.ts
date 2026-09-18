@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requirements, settlePayment, type PaymentPayload, type PaymentRequirements } from "@/lib/offer/x402";
+import { hostedRequirements, settlePayment, type PaymentPayload } from "@/lib/offer/x402";
 import { ensureSqlLedger } from "@/lib/offer/x402.server";
 
 export const Route = createFileRoute("/api/x402/settle")({
@@ -7,7 +7,7 @@ export const Route = createFileRoute("/api/x402/settle")({
     handlers: {
       POST: async ({ request }) => {
         await ensureSqlLedger();
-        let body: { paymentPayload?: PaymentPayload; paymentRequirements?: PaymentRequirements };
+        let body: { paymentPayload?: PaymentPayload };
         try {
           body = (await request.json()) as typeof body;
         } catch {
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/x402/settle")({
             { status: 400 },
           );
         }
-        const reqs = body.paymentRequirements ?? requirements();
+        const reqs = hostedRequirements();
         const result = await settlePayment(body.paymentPayload, reqs);
         return Response.json(result, { status: result.success ? 200 : 402 });
       },

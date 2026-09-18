@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdoptRouteImport } from './routes/adopt'
+import { Route as AttaqueRouteImport } from './routes/attaque'
 import { Route as BenchmarkRouteImport } from './routes/benchmark'
 import { Route as BlindRouteImport } from './routes/blind'
 import { Route as CertifyRouteImport } from './routes/certify'
@@ -29,6 +30,7 @@ import { Route as ShaRouteImport } from './routes/sha'
 import { Route as TestsRouteImport } from './routes/tests'
 import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as TraceRouteImport } from './routes/trace'
+import { Route as VerdictRouteImport } from './routes/verdict'
 import { Route as ApiV1CertifyRouteImport } from './routes/api/v1/certify'
 import { Route as ApiX402IndexRouteImport } from './routes/api/x402/index'
 import { Route as ApiX402SettleRouteImport } from './routes/api/x402/settle'
@@ -42,6 +44,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdoptRoute = AdoptRouteImport.update({
   id: '/adopt',
   path: '/adopt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttaqueRoute = AttaqueRouteImport.update({
+  id: '/attaque',
+  path: '/attaque',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BenchmarkRoute = BenchmarkRouteImport.update({
@@ -134,6 +141,11 @@ const TraceRoute = TraceRouteImport.update({
   path: '/trace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VerdictRoute = VerdictRouteImport.update({
+  id: '/verdict',
+  path: '/verdict',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1CertifyRoute = ApiV1CertifyRouteImport.update({
   id: '/api/v1/certify',
   path: '/api/v1/certify',
@@ -158,6 +170,7 @@ const ApiX402VerifyRoute = ApiX402VerifyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/adopt': typeof AdoptRoute
+  '/attaque': typeof AttaqueRoute
   '/benchmark': typeof BenchmarkRoute
   '/blind': typeof BlindRoute
   '/certify': typeof CertifyRoute
@@ -176,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/tests': typeof TestsRoute
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
+  '/verdict': typeof VerdictRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
   '/api/x402/settle': typeof ApiX402SettleRoute
   '/api/x402/verify': typeof ApiX402VerifyRoute
@@ -184,6 +198,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/adopt': typeof AdoptRoute
+  '/attaque': typeof AttaqueRoute
   '/benchmark': typeof BenchmarkRoute
   '/blind': typeof BlindRoute
   '/certify': typeof CertifyRoute
@@ -202,6 +217,7 @@ export interface FileRoutesByTo {
   '/tests': typeof TestsRoute
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
+  '/verdict': typeof VerdictRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
   '/api/x402/settle': typeof ApiX402SettleRoute
   '/api/x402/verify': typeof ApiX402VerifyRoute
@@ -211,6 +227,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/adopt': typeof AdoptRoute
+  '/attaque': typeof AttaqueRoute
   '/benchmark': typeof BenchmarkRoute
   '/blind': typeof BlindRoute
   '/certify': typeof CertifyRoute
@@ -229,6 +246,7 @@ export interface FileRoutesById {
   '/tests': typeof TestsRoute
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
+  '/verdict': typeof VerdictRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
   '/api/x402/settle': typeof ApiX402SettleRoute
   '/api/x402/verify': typeof ApiX402VerifyRoute
@@ -239,6 +257,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/adopt'
+    | '/attaque'
     | '/benchmark'
     | '/blind'
     | '/certify'
@@ -257,6 +276,7 @@ export interface FileRouteTypes {
     | '/tests'
     | '/tokens'
     | '/trace'
+    | '/verdict'
     | '/api/v1/certify'
     | '/api/x402/settle'
     | '/api/x402/verify'
@@ -265,6 +285,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/adopt'
+    | '/attaque'
     | '/benchmark'
     | '/blind'
     | '/certify'
@@ -283,6 +304,7 @@ export interface FileRouteTypes {
     | '/tests'
     | '/tokens'
     | '/trace'
+    | '/verdict'
     | '/api/v1/certify'
     | '/api/x402/settle'
     | '/api/x402/verify'
@@ -291,6 +313,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/adopt'
+    | '/attaque'
     | '/benchmark'
     | '/blind'
     | '/certify'
@@ -309,6 +332,7 @@ export interface FileRouteTypes {
     | '/tests'
     | '/tokens'
     | '/trace'
+    | '/verdict'
     | '/api/v1/certify'
     | '/api/x402/settle'
     | '/api/x402/verify'
@@ -318,6 +342,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdoptRoute: typeof AdoptRoute
+  AttaqueRoute: typeof AttaqueRoute
   BenchmarkRoute: typeof BenchmarkRoute
   BlindRoute: typeof BlindRoute
   CertifyRoute: typeof CertifyRoute
@@ -336,6 +361,7 @@ export interface RootRouteChildren {
   TestsRoute: typeof TestsRoute
   TokensRoute: typeof TokensRoute
   TraceRoute: typeof TraceRoute
+  VerdictRoute: typeof VerdictRoute
   ApiV1CertifyRoute: typeof ApiV1CertifyRoute
   ApiX402SettleRoute: typeof ApiX402SettleRoute
   ApiX402VerifyRoute: typeof ApiX402VerifyRoute
@@ -356,6 +382,13 @@ declare module '@tanstack/react-router' {
       path: '/adopt'
       fullPath: '/adopt'
       preLoaderRoute: typeof AdoptRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attaque': {
+      id: '/attaque'
+      path: '/attaque'
+      fullPath: '/attaque'
+      preLoaderRoute: typeof AttaqueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/benchmark': {
@@ -484,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TraceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/verdict': {
+      id: '/verdict'
+      path: '/verdict'
+      fullPath: '/verdict'
+      preLoaderRoute: typeof VerdictRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/certify': {
       id: '/api/v1/certify'
       path: '/api/v1/certify'
@@ -518,6 +558,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdoptRoute: AdoptRoute,
+  AttaqueRoute: AttaqueRoute,
   BenchmarkRoute: BenchmarkRoute,
   BlindRoute: BlindRoute,
   CertifyRoute: CertifyRoute,
@@ -536,6 +577,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestsRoute: TestsRoute,
   TokensRoute: TokensRoute,
   TraceRoute: TraceRoute,
+  VerdictRoute: VerdictRoute,
   ApiV1CertifyRoute: ApiV1CertifyRoute,
   ApiX402SettleRoute: ApiX402SettleRoute,
   ApiX402VerifyRoute: ApiX402VerifyRoute,

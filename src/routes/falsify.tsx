@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -118,9 +118,14 @@ function FalsifyPage() {
           ))}
         </ol>
         <p className="mt-4 font-mono text-xs text-subtle">
-          Protocole gelé. Pas encore lancé. Un négatif est un livrable.
+          Protocole gelé. Lancé en mécanique (GATE = B). Un négatif est un livrable.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">{RESET_PROTOCOL.threshold}</p>
+        <p className="mt-4">
+          <Button asChild variant="outline">
+            <Link to="/attaque">Attaquer CERT+GATE</Link>
+          </Button>
+        </p>
       </section>
     </div>
   );

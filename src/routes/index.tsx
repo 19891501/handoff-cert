@@ -8,6 +8,7 @@ import { VerdictStamp } from "@/components/cert/stamp";
 import { certify, getCase, type Certificate, type Verdict } from "@/lib/handoff";
 import { FEATURED_CASES } from "@/lib/handoff/cases";
 import { KNOWN_FALSE } from "@/lib/bench/falsify";
+import { FINAL_VERDICT } from "@/lib/bench/verdict";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({ component: Home });
@@ -32,49 +33,49 @@ function Home() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:py-16">
       <p className="reveal text-xs font-medium uppercase tracking-[0.22em] text-subtle">
-        Couche de certification · V0 gelé
+        Verdict final · {FINAL_VERDICT.date} · V0 gelé
       </p>
       <h1 className="reveal reveal-1 mt-4 max-w-3xl font-display text-4xl leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-        Peut-on reprendre <em className="italic">sans deviner</em>&nbsp;?
+        On certifie. On n'arrête pas B à tort.
       </h1>
       <p className="reveal reveal-2 mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-        HANDOFF CERT n'est pas une application d'agents. C'est un
-        sceau à la frontière : assez d'état, de preuves et de reste pour que
-        B reprenne sans reconstruire l'histoire de A.
+        {FINAL_VERDICT.phrase}
       </p>
       <div className="reveal reveal-3 mt-8 flex flex-wrap gap-3">
         <Button asChild>
-          <Link to="/offre">
-            Voir l'offre
+          <Link to="/verdict">
+            Lire le verdict
             <ArrowRight />
           </Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/certify">Certifier un paquet</Link>
+          <Link to="/attaque">Banc CERT+GATE</Link>
         </Button>
       </div>
 
       <section className="reveal reveal-4 mt-14 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-          Verdict final
-        </p>
-        <h2 className="mt-3 font-display text-3xl tracking-tight">Le noyau tient. On publie les trous.</h2>
+        <div className="flex flex-wrap gap-2">
+          <Badge tone="corrompu">Reprise sûre : tuée</Badge>
+          <Badge tone="reprenable">Laboratoire : tenu</Badge>
+          <Badge tone="partiel">Facturé : non</Badge>
+        </div>
+        <h2 className="mt-5 font-display text-3xl tracking-tight">
+          {FINAL_VERDICT.kills} kills · {FINAL_VERDICT.premier_contre_exemple}
+        </h2>
         <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          Architecture GO. Juge déterministe GO, et gelé. Banc trophée 24/24.
-          Corpus 18/22 — quatre faux REPRENABLE nommés, lockés. Sceau JCS →
-          SHA-256. Insertion : Command.goto seulement. Reconstruct non. Reset
-          A→B : protocole écrit, pas lancé. Hypothèse commerciale : inconnue.
+          Monde CORROMPU, V0 REPRENABLE, grille PASS. Contrôles lexique{" "}
+          {FINAL_VERDICT.controles} : un token FAIL arrête encore B. Ce n'est
+          pas suffisant. Lock KFP rouge. Pas de ruleset 1.1 déguisé.
         </p>
         <div className="mt-6 overflow-hidden rounded-lg bg-background/60">
           <table className="w-full text-sm">
             <tbody>
               {[
-                ["Trophée", "24/24 — régression, pas une croyance"],
-                ["Adversarial", "4 KFP encore faux — le lock doit rester rouge si on « corrige »"],
-                ["Sceau", "cp.v1 · Integrity ≠ Truth"],
-                ["Hook", "wrapNode autour de goto · silence ailleurs"],
-                ["Ledger", "nonce persisté · replay = même tx"],
-                ["On ne construit pas", "comptes, npm, reconstruct, HMAC AION"],
+                ["Claim « B ne part pas à tort »", "Tué — 4 mondes CORROMPU en PASS"],
+                ["Notaire V0", "Tenu, gelé, 4 KFP publics"],
+                ["Relais x402", "Fermé — requirements serveur"],
+                ["SKU / nonce", "Un nonce, un certificat"],
+                ["1.1 / npm / HMAC", "Non. Décision humaine, pas un tour de plus."],
               ].map(([k, v]) => (
                 <tr key={k} className="border-b border-border last:border-0">
                   <td className="px-4 py-3 font-medium">{k}</td>
@@ -125,7 +126,7 @@ function Home() {
             ))}
           </ul>
           <Button asChild variant="outline" className="mt-6">
-            <Link to="/falsify">Dossier</Link>
+            <Link to="/verdict">Verdict</Link>
           </Button>
         </aside>
       </div>

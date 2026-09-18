@@ -362,15 +362,45 @@ export async function settlePayment(
       network: X402_NETWORK,
       replay: stored.transaction !== hash,
     };
-  } catch (e) {
+  } catch {
     return {
       success: false,
       payer: verified.payer,
       transaction: "",
       network: X402_NETWORK,
-      errorReason: e instanceof Error ? e.message : "settle_failed",
+      errorReason: "settle_failed",
     };
   }
+}
+
+/** Requirements hébergés : jamais ceux du client. Ferme le relais V-01. */
+export function hostedRequirements(resource?: string): PaymentRequirements {
+  return requirements(resource);
+}
+
+export async function admitPayment(
+  paymentPayload: PaymentPayload,
+  paymentRequirements: PaymentRequirements,
+): Promise<
+  | { ok: true; payer: Address; transaction: string }
+  | { ok: false; errorReason: string; settlement: SettleResult }
+> {
+  const settlement = await settlePayment(paymentPayload, paymentRequirements);
+  if (!settlement.success) {
+    return {
+      ok: false,
+      errorReason: settlement.errorReason ?? "payment_invalid",
+      settlement,
+    };
+  }
+  if (settlement.replay) {
+    return { ok: false, errorReason: "nonce_consumed", settlement };
+  }
+  return {
+    ok: true,
+    payer: settlement.payer!,
+    transaction: settlement.transaction,
+  };
 }
 
 export async function gateCertify(request: Request): Promise<
@@ -380,7 +410,7 @@ export async function gateCertify(request: Request): Promise<
   if (!enforced()) {
     return { ok: true, payer: "0x0000000000000000000000000000000000000000", transaction: "" };
   }
-  const reqs = requirements(new URL(request.url).pathname);
+  const reqs = hostedRequirements(new URL(request.url).pathname);
   const header =
     request.headers.get("X-PAYMENT") ?? request.headers.get("PAYMENT-SIGNATURE");
   const payload = parsePaymentHeader(header);
@@ -391,16 +421,16 @@ export async function gateCertify(request: Request): Promise<
       body: paymentRequiredBody("X-PAYMENT header is required"),
     };
   }
-  const settled = await settlePayment(payload, reqs);
-  if (!settled.success) {
+  const admitted = await admitPayment(payload, reqs);
+  if (!admitted.ok) {
     return {
       ok: false,
       status: 402,
       body: {
-        ...paymentRequiredBody(settled.errorReason ?? "payment_invalid"),
-        settlement: settled,
+        ...paymentRequiredBody(admitted.errorReason),
+        settlement: admitted.settlement,
       },
     };
   }
-  return { ok: true, payer: settled.payer!, transaction: settled.transaction };
+  return { ok: true, payer: admitted.payer, transaction: admitted.transaction };
 }

@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { to: "/", label: "Accueil" },
+  { to: "/verdict", label: "Verdict" },
   { to: "/offre", label: "Offre" },
   { to: "/certify", label: "Certifier" },
-  { to: "/falsify", label: "Falsification" },
-  { to: "/adopt", label: "Adopter" },
+  { to: "/attaque", label: "Attaque" },
 ] as const;
 
 export function Shell({ children }: { children: ReactNode }) {
@@ -52,8 +52,11 @@ export function Shell({ children }: { children: ReactNode }) {
       <main className="flex-1">{children}</main>
       <footer className="border-t border-border/80">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 py-5 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between">
-          <p>V0 gelé · 4 KFP · fail-closed</p>
+          <p>Verdict final · V0 gelé · 4 KFP</p>
           <p className="flex flex-wrap gap-x-3 gap-y-1">
+            <Link to="/verdict" className="hover:text-foreground">
+              Verdict
+            </Link>
             <Link to="/tests" className="hover:text-foreground">
               Tests
             </Link>
@@ -68,6 +71,9 @@ export function Shell({ children }: { children: ReactNode }) {
             </Link>
             <Link to="/tokens" className="hover:text-foreground">
               Tokens
+            </Link>
+            <Link to="/attaque" className="hover:text-foreground">
+              Attaque
             </Link>
             <Link to="/goto" className="hover:text-foreground">
               Goto

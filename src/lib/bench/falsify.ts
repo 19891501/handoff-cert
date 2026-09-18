@@ -84,16 +84,17 @@ export const KNOWN_FALSE: KnownFalse[] = [
 
 export const RESET_PROTOCOL = {
   frozen: true,
-  run: false,
+  run: true,
+  kind: "gate-mecanique",
   question: "Un agent peut-il reprendre sans l'historique, uniquement à partir du paquet scellé ?",
   steps: [
     "A produit un paquet + sceau cp.v1",
     "L'historique de A est effacé",
     "B reçoit le sceau et les hashes, pas les prompts",
-    "On note reprise / échec / motif",
+    "GATE = permission de B (pas un LLM). On note PASS / STOP.",
   ],
   threshold:
-    "Négatif publiable si B échoue hors tâches triviales. Positif seulement si reprise sur une classe non triviale, reproductible.",
+    "Négatif publiable si B (GATE) laisse passer un monde CORROMPU. Positif seulement si reprise sur une classe non triviale, reproductible, sans faux REPRENABLE.",
 };
 
 export interface FalsifyRow {
