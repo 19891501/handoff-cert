@@ -24,6 +24,8 @@ import { Route as GotoRouteImport } from './routes/goto'
 import { Route as InvariantsRouteImport } from './routes/invariants'
 import { Route as MarqueursRouteImport } from './routes/marqueurs'
 import { Route as OffreRouteImport } from './routes/offre'
+import { Route as EnCapRouteImport } from './routes/en.cap'
+import { Route as EnOffreRouteImport } from './routes/en.offre'
 import { Route as PatternsRouteImport } from './routes/patterns'
 import { Route as PreuveRouteImport } from './routes/preuve'
 import { Route as RulesRouteImport } from './routes/rules'
@@ -112,6 +114,16 @@ const OffreRoute = OffreRouteImport.update({
   path: '/offre',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EnCapRoute = EnCapRouteImport.update({
+  id: '/en/cap',
+  path: '/en/cap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnOffreRoute = EnOffreRouteImport.update({
+  id: '/en/offre',
+  path: '/en/offre',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PatternsRoute = PatternsRouteImport.update({
   id: '/patterns',
   path: '/patterns',
@@ -189,6 +201,8 @@ export interface FileRoutesByFullPath {
   '/invariants': typeof InvariantsRoute
   '/marqueurs': typeof MarqueursRoute
   '/offre': typeof OffreRoute
+  '/en/cap': typeof EnCapRoute
+  '/en/offre': typeof EnOffreRoute
   '/patterns': typeof PatternsRoute
   '/preuve': typeof PreuveRoute
   '/rules': typeof RulesRoute
@@ -218,6 +232,8 @@ export interface FileRoutesByTo {
   '/invariants': typeof InvariantsRoute
   '/marqueurs': typeof MarqueursRoute
   '/offre': typeof OffreRoute
+  '/en/cap': typeof EnCapRoute
+  '/en/offre': typeof EnOffreRoute
   '/patterns': typeof PatternsRoute
   '/preuve': typeof PreuveRoute
   '/rules': typeof RulesRoute
@@ -248,6 +264,8 @@ export interface FileRoutesById {
   '/invariants': typeof InvariantsRoute
   '/marqueurs': typeof MarqueursRoute
   '/offre': typeof OffreRoute
+  '/en/cap': typeof EnCapRoute
+  '/en/offre': typeof EnOffreRoute
   '/patterns': typeof PatternsRoute
   '/preuve': typeof PreuveRoute
   '/rules': typeof RulesRoute
@@ -279,6 +297,8 @@ export interface FileRouteTypes {
     | '/invariants'
     | '/marqueurs'
     | '/offre'
+    | '/en/cap'
+    | '/en/offre'
     | '/patterns'
     | '/preuve'
     | '/rules'
@@ -308,6 +328,8 @@ export interface FileRouteTypes {
     | '/invariants'
     | '/marqueurs'
     | '/offre'
+    | '/en/cap'
+    | '/en/offre'
     | '/patterns'
     | '/preuve'
     | '/rules'
@@ -337,6 +359,8 @@ export interface FileRouteTypes {
     | '/invariants'
     | '/marqueurs'
     | '/offre'
+    | '/en/cap'
+    | '/en/offre'
     | '/patterns'
     | '/preuve'
     | '/rules'
@@ -367,6 +391,8 @@ export interface RootRouteChildren {
   InvariantsRoute: typeof InvariantsRoute
   MarqueursRoute: typeof MarqueursRoute
   OffreRoute: typeof OffreRoute
+  EnCapRoute: typeof EnCapRoute
+  EnOffreRoute: typeof EnOffreRoute
   PatternsRoute: typeof PatternsRoute
   PreuveRoute: typeof PreuveRoute
   RulesRoute: typeof RulesRoute
@@ -488,6 +514,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OffreRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/en/cap': {
+      id: '/en/cap'
+      path: '/en/cap'
+      fullPath: '/en/cap'
+      preLoaderRoute: typeof EnCapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/en/offre': {
+      id: '/en/offre'
+      path: '/en/offre'
+      fullPath: '/en/offre'
+      preLoaderRoute: typeof EnOffreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/patterns': {
       id: '/patterns'
       path: '/patterns'
@@ -591,6 +631,8 @@ const rootRouteChildren: RootRouteChildren = {
   InvariantsRoute: InvariantsRoute,
   MarqueursRoute: MarqueursRoute,
   OffreRoute: OffreRoute,
+  EnCapRoute: EnCapRoute,
+  EnOffreRoute: EnOffreRoute,
   PatternsRoute: PatternsRoute,
   PreuveRoute: PreuveRoute,
   RulesRoute: RulesRoute,

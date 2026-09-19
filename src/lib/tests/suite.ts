@@ -44,7 +44,9 @@ import {
   signExact,
   verifyPayment,
 } from "../offer/x402.ts";
-import { GATE_SKU, RECEIPT } from "../offer/mission.ts";
+import { GATE_SKU, RECEIPT, MISSION } from "../offer/mission.ts";
+import { capCopy, offreCopy } from "../i18n/copy.ts";
+import { localeFromPath, pageHref } from "../i18n/locale.ts";
 import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -378,6 +380,20 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(t.verdict, "REPRENABLE", "v0");
     eq(t.falseSafe, true, "faux R");
     if (t.findings.some((f) => f.severity === "critical")) fail("un critical aurait corrigé 001");
+  });
+
+  await check("i18n", "en-cap-offre", "EN copy: 2030, 1.2 grille, V0 pas sûr", () => {
+    eq(localeFromPath("/cap"), "fr", "fr cap");
+    eq(localeFromPath("/en/cap"), "en", "en cap");
+    eq(pageHref("offre", "en"), "/en/offre", "href");
+    const cap = capCopy("en");
+    if (!cap.kicker.includes("2030")) fail("horizon");
+    if (!cap.sentence.includes("1.2")) fail("1.2");
+    if (!cap.never.some((n) => /V0/.test(n))) fail("never V0");
+    eq(capCopy("fr").name, MISSION.name, "FR name");
+    const offre = offreCopy("en");
+    if (!offre.not.some((n) => /V0/.test(n))) fail("offre V0");
+    if (!offre.twoSkus.includes("1.0") || !offre.twoSkus.includes("1.2")) fail("skus");
   });
 
   await check("Offre", "sku", "prix public, couches séparées", async () => {

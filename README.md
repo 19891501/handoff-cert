@@ -147,6 +147,7 @@ npm run dev
 ```
 
 Interface : Accueil · Cap · Offre · Certifier · Falsification · Adopter · Verdict.
+English : `/en/cap` · `/en/offre` (toggle FR | EN).
 
 ## Licence
 

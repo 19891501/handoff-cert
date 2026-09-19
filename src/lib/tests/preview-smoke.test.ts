@@ -77,4 +77,27 @@ describe("preview smoke (parent :8080)", () => {
     if (!res) return;
     assert.notEqual(res.status, 500);
   });
+
+  it("GET /cap → 200", async (t) => {
+    const res = await fetchLive(t, "/cap");
+    if (!res) return;
+    assert.equal(res.status, 200);
+  });
+
+  it("GET /en/cap → 200, English copy", async (t) => {
+    const res = await fetchLive(t, "/en/cap");
+    if (!res) return;
+    assert.equal(res.status, 200);
+    const body = await res.text();
+    assert.ok(
+      body.includes("The TLS of agent handoffs") || body.includes("total freedom"),
+      "English Cap copy missing",
+    );
+  });
+
+  it("GET /en/offre → 200", async (t) => {
+    const res = await fetchLive(t, "/en/offre");
+    if (!res) return;
+    assert.equal(res.status, 200);
+  });
 });

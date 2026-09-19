@@ -1,42 +1,51 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouterState } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GATE_SKU, LICENCE, MISSION, NEVER, RECEIPT, TARGETS } from "@/lib/offer/mission";
+import { LangToggle } from "@/components/layout/lang-toggle";
+import { capCopy } from "@/lib/i18n/copy";
+import { localeFromPath, pageHref } from "@/lib/i18n/locale";
+import { GATE_SKU, LICENCE, RECEIPT } from "@/lib/offer/mission";
 
 export const Route = createFileRoute("/cap")({ component: CapPage });
 
-function CapPage() {
+export function CapPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const locale = localeFromPath(pathname);
+  const copy = capCopy(locale);
+  const numberLocale = locale === "en" ? "en-GB" : "fr-FR";
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:py-16">
-      <p className="text-xs font-medium uppercase tracking-[0.22em] text-subtle">
-        Cap · {MISSION.horizon} · liberté totale
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-subtle">
+          {copy.kicker}
+        </p>
+        <LangToggle page="cap" locale={locale} />
+      </div>
       <h1 className="mt-4 max-w-3xl font-display text-4xl leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-        {MISSION.name}
+        {copy.name}
       </h1>
       <p className="mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-        {MISSION.sentence}
+        {copy.sentence}
       </p>
-      <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{MISSION.why_money}</p>
+      <p className="mt-3 max-w-2xl text-sm text-muted-foreground">{copy.whyMoney}</p>
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Button asChild>
-          <Link to="/offre">Encaisser</Link>
+          <Link to={pageHref("offre", locale)}>{copy.collect}</Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/verdict">Le gel reste rouge</Link>
+          <Link to="/verdict">{copy.freezeRed}</Link>
         </Button>
       </div>
 
       <section className="mt-14 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-          Très grands objectifs
+          {copy.targetsKicker}
         </p>
-        <h2 className="mt-3 font-display text-3xl tracking-tight">
-          On vise la rente, pas un laboratoire.
-        </h2>
+        <h2 className="mt-3 font-display text-3xl tracking-tight">{copy.targetsTitle}</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {TARGETS.map((t) => (
+          {copy.targets.map((t) => (
             <article key={t.id} className="rounded-lg bg-background/60 p-4">
               <Badge tone="partiel">{t.money}</Badge>
               <h3 className="mt-3 font-display text-2xl tracking-tight">{t.label}</h3>
@@ -49,34 +58,34 @@ function CapPage() {
       <div className="mt-8 grid gap-4 lg:grid-cols-3">
         <Sku
           sku={RECEIPT.sku}
-          title={RECEIPT.name}
+          title={copy.receiptName}
           price={`${RECEIPT.price_eur} €`}
-          role={RECEIPT.role}
+          role={copy.receiptRole}
           tone="partiel"
         />
         <Sku
           sku={GATE_SKU.sku}
-          title={GATE_SKU.name}
+          title={copy.gateName}
           price={`${GATE_SKU.price_eur.toFixed(2)} €`}
-          role={GATE_SKU.role}
+          role={copy.gateRole}
           tone="reprenable"
         />
         <Sku
           sku={LICENCE.sku}
-          title={LICENCE.name}
-          price={`${LICENCE.price_eur.toLocaleString("fr-FR")} € / ${LICENCE.period}`}
-          role={LICENCE.role}
+          title={copy.licenceName}
+          price={`${LICENCE.price_eur.toLocaleString(numberLocale)} € / ${copy.licencePeriod}`}
+          role={copy.licenceRole}
           tone="default"
         />
       </div>
 
       <section className="mt-10 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-          Rien négliger
+          {copy.neverKicker}
         </p>
-        <h2 className="mt-3 font-display text-3xl tracking-tight">Ce qu'on ne fera jamais</h2>
+        <h2 className="mt-3 font-display text-3xl tracking-tight">{copy.neverTitle}</h2>
         <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-          {NEVER.map((line) => (
+          {copy.never.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
