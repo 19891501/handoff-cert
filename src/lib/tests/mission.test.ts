@@ -1,7 +1,18 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { OFFER, OFFERS } from "../offer/catalog.ts";
-import { GATE_SKU, MISSION, NEVER, RECEIPT, TARGETS } from "../offer/mission.ts";
+import {
+  GATE_SKU,
+  KPI,
+  LIVE,
+  MISSION,
+  NEVER,
+  RECEIPT,
+  TARGETS,
+  liveIsHonestPreview,
+  liveSnapshot,
+  readLivePayload,
+} from "../offer/mission.ts";
 
 describe("mission commerciale", () => {
   it("V0 reste le SKU reçu, pas la grille", () => {
@@ -15,8 +26,29 @@ describe("mission commerciale", () => {
   it("objectifs énormes, sans vendre V0 comme sûr", () => {
     assert.equal(MISSION.horizon, "2030");
     assert.equal(TARGETS.length, 4);
+    assert.deepEqual(
+      TARGETS.map((t) => t.id),
+      ["certs", "graphs", "arr", "standard"],
+    );
     assert.ok(NEVER.some((n) => /V0/.test(n)));
     assert.ok(MISSION.sentence.includes("1.2"));
+  });
+
+  it("KPI live : zéros honnêtes tant que preview", () => {
+    assert.equal(LIVE.certs, 0);
+    assert.equal(LIVE.graphs, 0);
+    assert.equal(LIVE.arr_eur, 0);
+    assert.equal(LIVE.billing, "preview");
+    assert.equal(LIVE.paying_customers, 0);
+    assert.equal(KPI.length, 3);
+    const snap = liveSnapshot();
+    assert.equal(liveIsHonestPreview(snap), true);
+    assert.equal(OFFER.billing, LIVE.billing);
+    const accepted = readLivePayload({ live: snap, targets: TARGETS });
+    assert.deepEqual(accepted, snap);
+    assert.equal(readLivePayload({ live: { ...snap, arr_eur: 50_000_000 } }), null);
+    assert.equal(readLivePayload({ live: { ...snap, paying_customers: 1 } }), null);
+    assert.equal(readLivePayload({ live: { ...snap, billing: "x402" } }), null);
   });
 
   it("OFFERS catalogue : reçu 1.0 0.001 et grille 1.2 0.05", () => {

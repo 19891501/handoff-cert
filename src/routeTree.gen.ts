@@ -32,6 +32,7 @@ import { Route as TestsRouteImport } from './routes/tests'
 import { Route as TokensRouteImport } from './routes/tokens'
 import { Route as TraceRouteImport } from './routes/trace'
 import { Route as VerdictRouteImport } from './routes/verdict'
+import { Route as ApiV1CapRouteImport } from './routes/api/v1/cap'
 import { Route as ApiV1CertifyRouteImport } from './routes/api/v1/certify'
 import { Route as ApiX402IndexRouteImport } from './routes/api/x402/index'
 import { Route as ApiX402SettleRouteImport } from './routes/api/x402/settle'
@@ -152,6 +153,11 @@ const VerdictRoute = VerdictRouteImport.update({
   path: '/verdict',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiV1CapRoute = ApiV1CapRouteImport.update({
+  id: '/api/v1/cap',
+  path: '/api/v1/cap',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1CertifyRoute = ApiV1CertifyRouteImport.update({
   id: '/api/v1/certify',
   path: '/api/v1/certify',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
   '/verdict': typeof VerdictRoute
+  '/api/v1/cap': typeof ApiV1CapRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
   '/api/x402/settle': typeof ApiX402SettleRoute
   '/api/x402/verify': typeof ApiX402VerifyRoute
@@ -226,6 +233,7 @@ export interface FileRoutesByTo {
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
   '/verdict': typeof VerdictRoute
+  '/api/v1/cap': typeof ApiV1CapRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
   '/api/x402/settle': typeof ApiX402SettleRoute
   '/api/x402/verify': typeof ApiX402VerifyRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/tokens': typeof TokensRoute
   '/trace': typeof TraceRoute
   '/verdict': typeof VerdictRoute
+  '/api/v1/cap': typeof ApiV1CapRoute
   '/api/v1/certify': typeof ApiV1CertifyRoute
   '/api/x402/settle': typeof ApiX402SettleRoute
   '/api/x402/verify': typeof ApiX402VerifyRoute
@@ -287,6 +296,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/trace'
     | '/verdict'
+    | '/api/v1/cap'
     | '/api/v1/certify'
     | '/api/x402/settle'
     | '/api/x402/verify'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/trace'
     | '/verdict'
+    | '/api/v1/cap'
     | '/api/v1/certify'
     | '/api/x402/settle'
     | '/api/x402/verify'
@@ -345,6 +356,7 @@ export interface FileRouteTypes {
     | '/tokens'
     | '/trace'
     | '/verdict'
+    | '/api/v1/cap'
     | '/api/v1/certify'
     | '/api/x402/settle'
     | '/api/x402/verify'
@@ -375,6 +387,7 @@ export interface RootRouteChildren {
   TokensRoute: typeof TokensRoute
   TraceRoute: typeof TraceRoute
   VerdictRoute: typeof VerdictRoute
+  ApiV1CapRoute: typeof ApiV1CapRoute
   ApiV1CertifyRoute: typeof ApiV1CertifyRoute
   ApiX402SettleRoute: typeof ApiX402SettleRoute
   ApiX402VerifyRoute: typeof ApiX402VerifyRoute
@@ -544,6 +557,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerdictRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/cap': {
+      id: '/api/v1/cap'
+      path: '/api/v1/cap'
+      fullPath: '/api/v1/cap'
+      preLoaderRoute: typeof ApiV1CapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/certify': {
       id: '/api/v1/certify'
       path: '/api/v1/certify'
@@ -599,6 +619,7 @@ const rootRouteChildren: RootRouteChildren = {
   TokensRoute: TokensRoute,
   TraceRoute: TraceRoute,
   VerdictRoute: VerdictRoute,
+  ApiV1CapRoute: ApiV1CapRoute,
   ApiV1CertifyRoute: ApiV1CertifyRoute,
   ApiX402SettleRoute: ApiX402SettleRoute,
   ApiX402VerifyRoute: ApiX402VerifyRoute,

@@ -44,7 +44,7 @@ import {
   signExact,
   verifyPayment,
 } from "../offer/x402.ts";
-import { GATE_SKU, RECEIPT } from "../offer/mission.ts";
+import { GATE_SKU, LIVE, TARGETS, liveIsHonestPreview, liveSnapshot, RECEIPT } from "../offer/mission.ts";
 import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -409,6 +409,17 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(gate.price_eur, GATE_SKU.price_eur, "align mission grille");
   });
 
+  await check("Offre", "kpi-live-zeros", "preview : certs=0 graphs=0 ARR=0, 4 cibles", () => {
+    const snap = liveSnapshot();
+    eq(snap.certs, 0, "certs");
+    eq(snap.graphs, 0, "graphs");
+    eq(snap.arr_eur, 0, "arr");
+    eq(snap.billing, "preview", "billing");
+    eq(snap.paying_customers, 0, "clients");
+    eq(LIVE.billing, OFFER.billing, "align OFFER");
+    eq(liveIsHonestPreview(snap), true, "honnête");
+    eq(TARGETS.length, 4, "targets");
+  });
   await check("Tokens", "families", "status true ≠ claim true ; confirme claim-only", () => {
     if (!STATUS_ONLY.includes("true")) fail("true est status-ok seulement");
     if (CLAIM_ONLY_OK.includes("true")) fail("true n'est pas un token de claim");
