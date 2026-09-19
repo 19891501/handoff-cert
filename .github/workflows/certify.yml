@@ -22,6 +22,4 @@ jobs:
         run: npm ci
 
       - name: npx tsx tests
-        run: |
-          npx --yes tsx --test src/lib/tests
-          npx --yes tsx --test examples/langgraph/graph.test.ts
+        run: npx --yes tsx --test src/lib/tests/*.test.ts examples/langgraph/graph.test.ts
