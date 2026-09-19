@@ -87,6 +87,26 @@ SKU `handoff-gate-v12` · ruleset `1.2` · **0,05 € / certificat** · grille p
 Facturation `preview` tant que `X402_PAY_TO` n’est pas posé. Aucun client
 payant.
 
+## SDK Rust — `certify` + `gate_resume`
+
+Crate `handoff-cert` (`sdks/rust`, `publish = false`). Pas crates.io.
+
+- `certify` : reçu **1.0** (défaut). KFP-001 reste REPRENABLE.
+- `gate_resume` / `gate_node` : grille **1.2** (défaut). KFP-001 → STOP.
+- Facturation `preview`. Le client n'invente pas de nonce x402.
+
+```toml
+handoff-cert = { git = "https://github.com/19891501/handoff-cert" }
+```
+
+```rust
+use handoff_cert::gate_resume;
+let gate = gate_resume(&paquet)?; // ruleset 1.2
+if !gate.ok() { /* B ne reprend pas */ }
+```
+
+`cargo test -p handoff-cert`
+
 ## x402 (Base Sepolia)
 
 Facilitateur local, spec v1 `exact` / EIP-3009 USDC.

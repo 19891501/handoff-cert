@@ -18,4 +18,11 @@ attachments
 .pglite
 AGENTS.md
 AGENTS.project.md
+target
+**/target
+*.pyc
+__pycache__
+.venv
+sdks/**/*.egg-info
+
 

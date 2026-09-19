@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { OFFER } from "@/lib/offer/catalog";
 import { GATE_SKU, RECEIPT } from "@/lib/offer/mission";
 import { getCase } from "@/lib/handoff/cases";
+import { CORPUS_CASES } from "@/lib/handoff/corpus";
 
 export const Route = createFileRoute("/offre")({ component: OffrePage });
 
@@ -17,6 +18,17 @@ const SAMPLE = JSON.stringify(
 const CURL = `curl -sS ${OFFER.endpoint} \\
   -H 'content-type: application/json' \\
   -d '{"paquet":{...}}'`;
+
+const RUST = `use handoff_cert::{gate_resume, Client};
+
+// Grille 1.2 — B ne part que si REPRENABLE. 0,05 €. Preview.
+let gate = gate_resume(&paquet)?;
+if !gate.ok() { /* STOP */ }
+
+// Reçu 1.0 — gelé, pas une grille. 0,001 €. KFP-001 passe encore.
+let receipt = Client::new().certify(&paquet, None)?;`;
+
+const KFP001 = CORPUS_CASES.find((c) => c.id === "X07")!.payload;
 
 type LedgerInfo = {
   table: string;
@@ -40,6 +52,10 @@ function OffrePage() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [x402, setX402] = useState<FacilitatorInfo | null>(null);
+  const [kfp, setKfp] = useState<{
+    v10: string;
+    v12: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,6 +83,34 @@ function OffrePage() {
       });
       const json: unknown = await res.json();
       setOut(JSON.stringify(json, null, 2));
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "appel impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runKfp() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const body = JSON.stringify({ paquet: KFP001 });
+      const [r10, r12] = await Promise.all([
+        fetch(OFFER.endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body,
+        }).then((r) => r.json() as Promise<{ certificate?: { verdict?: string; ruleset?: string } }>),
+        fetch(OFFER.endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ paquet: KFP001, ruleset: "1.2" }),
+        }).then((r) => r.json() as Promise<{ certificate?: { verdict?: string; ruleset?: string } }>),
+      ]);
+      setKfp({
+        v10: `${r10.certificate?.ruleset ?? "?"} ${r10.certificate?.verdict ?? "?"}`,
+        v12: `${r12.certificate?.ruleset ?? "?"} ${r12.certificate?.verdict ?? "?"}`,
+      });
     } catch (e) {
       setErr(e instanceof Error ? e.message : "appel impossible");
     } finally {
@@ -185,12 +229,51 @@ function OffrePage() {
         <Button asChild variant="outline">
           <Link to="/falsify">Lire les 4 KFP</Link>
         </Button>
+        <Button variant="outline" onClick={runKfp} disabled={busy}>
+          {busy ? "KFP-001…" : "KFP-001 · 1.0 vs 1.2"}
+        </Button>
       </div>
       {err ? <p className="mt-3 text-sm text-corrompu">{err}</p> : null}
+
+      {kfp ? (
+        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+            <Badge tone="partiel">{RECEIPT.sku}</Badge>
+            <p className="mt-3 font-mono text-sm">{kfp.v10}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Reçu gelé. gate_resume(1.0) PASS — pas une grille.
+            </p>
+          </article>
+          <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+            <Badge tone="reprenable">{GATE_SKU.sku}</Badge>
+            <p className="mt-3 font-mono text-sm">{kfp.v12}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Grille 1.2. gate_resume() STOP. C'est le produit.
+            </p>
+          </article>
+        </div>
+      ) : null}
 
       <pre className="mt-8 overflow-x-auto rounded-xl bg-card p-4 font-mono text-xs text-muted-foreground shadow-[var(--shadow-border)]">
         {CURL}
       </pre>
+
+      <section className="mt-8 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+          SDK Rust · gate_resume
+        </p>
+        <h2 className="mt-3 font-display text-2xl tracking-tight">
+          La grille dans le graphe
+        </h2>
+        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
+          Crate <span className="font-mono text-xs">handoff-cert</span> — pas
+          crates.io. certify = reçu 1.0. gate_resume = grille 1.2. Preview.
+          Aucun client payant.
+        </p>
+        <pre className="mt-5 overflow-x-auto rounded-lg bg-background/60 p-4 font-mono text-xs leading-relaxed text-muted-foreground">
+          {RUST}
+        </pre>
+      </section>
 
       {out ? (
         <pre className="mt-4 max-h-80 overflow-auto rounded-xl bg-card p-4 font-mono text-xs shadow-[var(--shadow-border)]">
