@@ -1,0 +1,54 @@
+{
+  "name": "@handoff/cert",
+  "version": "0.1.0",
+  "description": "TypeScript SDK + CLI for HANDOFF CERT (POST /api/v1/certify, gateResume). Preview billing. No paying customers. Not a standard.",
+  "license": "MIT",
+  "type": "module",
+  "private": false,
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "handoff-cert": "./bin/handoff-cert.mjs"
+  },
+  "files": [
+    "dist",
+    "src",
+    "bin",
+    "README.md",
+    "LICENSE",
+    "!src/*.test.ts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepack": "npm run build",
+    "test": "node --experimental-strip-types --test src/*.test.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/19891501/handoff-cert.git",
+    "directory": "packages/cert"
+  },
+  "keywords": [
+    "handoff",
+    "certificate",
+    "agents",
+    "gateResume",
+    "x402"
+  ]
+}
