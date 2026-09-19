@@ -6,6 +6,9 @@
   "overrides": {
     "nf3": "0.3.17"
   },
+  "bin": {
+    "handoff-cert": "./packages/cert/bin/handoff-cert.mjs"
+  },
   "scripts": {
     "dev": "node scripts/with-app-env.mjs vite dev --host 0.0.0.0 --port 8080",
     "build": "node scripts/with-app-env.mjs vite build && npm run db:migrate",
@@ -16,7 +19,9 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "npx tsx --test src/lib/tests/suite.test.ts src/lib/tests/serve-ruleset.test.ts src/lib/tests/mission.test.ts && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts",
+    "test": "npx tsx --test src/lib/tests/suite.test.ts src/lib/tests/serve-ruleset.test.ts src/lib/tests/mission.test.ts && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts && npm run test:sdk",
+    "test:sdk": "node --experimental-strip-types --test packages/cert/src/*.test.ts",
+    "publish:cert": "node scripts/publish-cert.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."
   },
