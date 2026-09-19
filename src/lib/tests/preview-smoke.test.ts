@@ -51,6 +51,31 @@ describe("preview smoke (parent :8080)", () => {
     );
   });
 
+  it("GET /cap → 200, body mentions 2030", async (t) => {
+    const res = await fetchLive(t, "/cap");
+    if (!res) return;
+    assert.equal(res.status, 200);
+    const body = await res.text();
+    assert.ok(body.includes("2030"), 'body must mention "2030"');
+  });
+
+  it("GET /api/v1/cap → 200 JSON zéros honnêtes", async (t) => {
+    const res = await fetchLive(t, "/api/v1/cap");
+    if (!res) return;
+    assert.equal(res.status, 200);
+    const json = (await res.json()) as {
+      live?: { certs?: unknown; graphs?: unknown; arr_eur?: unknown; billing?: unknown };
+      horizon?: unknown;
+      targets?: unknown;
+    };
+    assert.equal(json.live?.certs, 0);
+    assert.equal(json.live?.graphs, 0);
+    assert.equal(json.live?.arr_eur, 0);
+    assert.equal(json.live?.billing, "preview");
+    assert.equal(json.horizon, "2030");
+    assert.ok(Array.isArray(json.targets) && json.targets.length === 4, "4 cibles");
+  });
+
   it("GET /api/v1/certify → 200 JSON sku", async (t) => {
     const res = await fetchLive(t, "/api/v1/certify");
     if (!res) return;
