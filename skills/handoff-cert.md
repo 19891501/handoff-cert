@@ -130,6 +130,7 @@ When asked to wrap, gate, or adopt LangGraph:
 ## Pointers
 
 - Observer + gate: `src/lib/adopt/langgraph.ts` (`wrapNode`, `gateNode`, `isHandoffCommand`)
+- Starter LangGraph 1.2 (stop `goto` on CORROMPU): `examples/langgraph/`
 - Grille: `src/lib/bench/gate.ts` (`gateResume`, `RulesetId`)
 - 1.2 judge: `src/lib/handoff/ruleset12.ts` (`analyze12`, `certify12`)
 - 1.1 judge: `src/lib/handoff/ruleset11.ts`

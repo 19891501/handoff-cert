@@ -206,8 +206,11 @@ export async function runGraph<S extends Record<string, unknown>>(args: {
     const fn = args.nodes[current];
     if (!fn) break;
     const out = await fn(state);
-    if (isHandoffCommand(out)) {
-      const update = (out.update ?? {}) as Record<string, unknown>;
+    // Command.goto including __end__ (gateNode STOP). isHandoffCommand
+    // excludes END — wrapping stays silent; the runner must still apply update.
+    if (isRecord(out) && out.goto !== undefined) {
+      const command = out as LangGraphCommand;
+      const update = (command.update ?? {}) as Record<string, unknown>;
       const {
         continuation_proof: proofRaw,
         continuation_error,
@@ -216,7 +219,7 @@ export async function runGraph<S extends Record<string, unknown>>(args: {
       const envelope = {
         graph: args.name,
         node: current,
-        command: { goto: readGoto(out), graph: out.graph ?? null },
+        command: { goto: readGoto(command), graph: command.graph ?? null },
         state: stripSealed(state),
         updates: rawUpdate,
       };
@@ -224,13 +227,13 @@ export async function runGraph<S extends Record<string, unknown>>(args: {
       const proof = isRecord(proofRaw) ? (proofRaw as unknown as ContinuationProof) : null;
       steps.push({
         node: current,
-        goto: readGoto(out),
+        goto: readGoto(command),
         sealed: Boolean(proof),
         proof,
         error: typeof continuation_error === "string" ? continuation_error : null,
         envelope,
       });
-      current = readGoto(out) ?? LANGGRAPH_END;
+      current = readGoto(command) ?? LANGGRAPH_END;
     } else {
       if (isRecord(out)) state = { ...state, ...(out as Partial<S>) };
       const next = args.edges?.[current] ?? LANGGRAPH_END;
@@ -286,4 +289,9 @@ export function checkoutGraph() {
 export const WRAP_PATCH = `.addNode(
   "payment_agent",
   wrapNode("payment_agent", paymentAgent, { graph: "checkout" }),
+)`;
+
+export const GATE_PATCH = `.addNode(
+  "planner",
+  gateNode("planner", planner, { graph: "support", ruleset: "1.2" }),
 )`;

@@ -56,6 +56,9 @@ function Home() {
         <Button asChild variant="outline">
           <Link to="/offre">Les SKU</Link>
         </Button>
+        <Button asChild variant="outline">
+          <Link to="/starter">Starter 1.2</Link>
+        </Button>
       </div>
 
       <section className="reveal reveal-4 mt-14 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">

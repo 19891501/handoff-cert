@@ -115,7 +115,8 @@ POST /api/x402/settle
 1000 atomic = 0,001 USDC testnet.
 
 Insertion LangGraph : `wrapNode` autour de `Command.goto` seulement
-(observateur). `gateNode` est le couple CERT+GATE attaqué.
+(observateur). `gateNode` est le couple CERT+GATE attaqué. Starter 1.2 —
+comment arrêter `goto` sur CORROMPU : [`examples/langgraph/`](./examples/langgraph/).
 
 ## Ruleset V0 — gelé
 
@@ -143,10 +144,11 @@ Dossier : [`falsification/`](./falsification/).
 ```bash
 npm install
 npm test
+npm run example:langgraph
 npm run dev
 ```
 
-Interface : Accueil · Cap · Offre · Certifier · Falsification · Adopter · Verdict.
+Interface : Accueil · Cap · Offre · Starter · Certifier · Falsification · Adopter · Verdict.
 
 ## Licence
 

@@ -10,6 +10,7 @@ import {
   runGraph,
   wrapNode,
 } from "../adopt/langgraph.ts";
+import { probeHandoff, starterPackets } from "../adopt/starter.ts";
 import { PATTERNS } from "../adopt/patterns.ts";
 import { jcs } from "../format/jcs.ts";
 import { seal, samplePartiel } from "../format/proof.ts";
@@ -285,6 +286,32 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(readGoto(outFail), LANGGRAPH_END, "FAIL → END");
     eq(readGoto(outKfp), "executor", "KFP-001 passe la grille");
     eq(readGoto(outWrap), "executor", "observateur");
+  });
+
+  await check("Starter", "langgraph-12-corrompu", "gateNode 1.2 : CORROMPU coupe goto ; wrap laisse passer", async () => {
+    const rows = starterPackets();
+    if (rows.length < 4) fail("starter packets");
+    for (const row of rows) {
+      const wrap = await probeHandoff(row.packet, "wrap");
+      const v12 = await probeHandoff(row.packet, "1.2");
+      eq(wrap.stopped, false, `${row.id} wrap`);
+      eq(wrap.goto, "executor", `${row.id} wrap dest`);
+      eq(v12.stopped, row.expect12 === "end", `${row.id} 1.2`);
+      if (row.expect12 === "end") {
+        eq(v12.goto, LANGGRAPH_END, `${row.id} END`);
+        eq(v12.gate, "STOP", `${row.id} STOP`);
+        eq(v12.executed, false, `${row.id} executor`);
+      } else {
+        eq(v12.gate, "PASS", `${row.id} PASS`);
+        eq(v12.verdict, "REPRENABLE", `${row.id} verdict`);
+        eq(v12.executed, true, `${row.id} ran`);
+      }
+    }
+    const kfp002 = rows.find((r) => r.id === "KFP-002");
+    if (!kfp002) fail("KFP-002");
+    const v10 = await probeHandoff(kfp002.packet, "1.0");
+    eq(v10.stopped, false, "1.0 laisse KFP-002");
+    eq(v10.gate, "PASS", "reçu");
   });
 
   await check("Verdict", "final-aligne", "gel du verdict = banc CERT+GATE", async () => {

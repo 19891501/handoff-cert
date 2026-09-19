@@ -6,6 +6,7 @@ const NAV = [
   { to: "/", label: "Accueil" },
   { to: "/cap", label: "Cap" },
   { to: "/offre", label: "Offre" },
+  { to: "/starter", label: "Starter" },
   { to: "/verdict", label: "Verdict" },
   { to: "/attaque", label: "Attaque" },
 ] as const;
@@ -77,6 +78,9 @@ export function Shell({ children }: { children: ReactNode }) {
             </Link>
             <Link to="/goto" className="hover:text-foreground">
               Goto
+            </Link>
+            <Link to="/starter" className="hover:text-foreground">
+              Starter
             </Link>
             <Link to="/patterns" className="hover:text-foreground">
               Motifs
