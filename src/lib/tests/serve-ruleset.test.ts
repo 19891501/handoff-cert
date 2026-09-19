@@ -5,7 +5,8 @@ import {
   parseBodyRuleset,
   serveCertify,
 } from "../offer/serve.ts";
-import { OFFER } from "../offer/catalog.ts";
+import { OFFER, OFFERS } from "../offer/catalog.ts";
+import { GATE_SKU, RECEIPT } from "../offer/mission.ts";
 import { attackCorpus } from "../bench/attack.ts";
 
 function kfp001Packet(): unknown {
@@ -74,12 +75,22 @@ describe("serve / HTTP ruleset", () => {
     );
   });
 
-  it("GET catalogue mentions 1.0, 1.1 and 1.2 ; sold SKU remains 1.0", () => {
+  it("GET catalogue lists receipt 1.0 0.001 and gate 1.2 0.05 from mission.ts", () => {
     const cat = catalogueRulesets();
     assert.equal(cat.sku, "handoff-cert-v1");
     assert.equal(cat.ruleset, "1.0");
     assert.deepEqual(cat.rulesets, ["1.0", "1.1", "1.2"]);
     assert.equal(OFFER.ruleset, "1.0");
     assert.equal(OFFER.sku, "handoff-cert-v1");
+    assert.equal(cat.skus.length, 2);
+    assert.equal(OFFERS.length, 2);
+    assert.equal(cat.skus[0]?.sku, RECEIPT.sku);
+    assert.equal(cat.skus[0]?.ruleset, "1.0");
+    assert.equal(cat.skus[0]?.price_eur, 0.001);
+    assert.equal(cat.skus[0]?.price_eur, RECEIPT.price_eur);
+    assert.equal(cat.skus[1]?.sku, GATE_SKU.sku);
+    assert.equal(cat.skus[1]?.ruleset, "1.2");
+    assert.equal(cat.skus[1]?.price_eur, 0.05);
+    assert.equal(cat.skus[1]?.price_eur, GATE_SKU.price_eur);
   });
 });
