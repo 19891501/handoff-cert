@@ -5,11 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   runAttack,
   runAttack11,
-  runAttack12,
   runResetAB,
   type AttackReport,
   type ResetAB,
 } from "@/lib/bench/attack";
+import * as attackBench from "@/lib/bench/attack";
 import { RESET_PROTOCOL } from "@/lib/bench/falsify";
 import { pretty } from "@/lib/utils";
 
@@ -20,7 +20,8 @@ function getRunAttack11(): (() => Promise<AttackReport>) | null {
 }
 
 function getRunAttack12(): (() => Promise<AttackReport>) | null {
-  return typeof runAttack12 === "function" ? runAttack12 : null;
+  const fn = (attackBench as { runAttack12?: unknown }).runAttack12;
+  return typeof fn === "function" ? (fn as () => Promise<AttackReport>) : null;
 }
 
 const RUN_ATTACK_11 = getRunAttack11();
@@ -126,7 +127,7 @@ function AttaquePage() {
         ) : null}
       </div>
 
-      {report ? (
+      {(report || has11 || has12) ? (
         <>
           <div
             className={
@@ -137,16 +138,25 @@ function AttaquePage() {
                   : "mt-8"
             }
           >
-            <NotaryCard
-              eyebrow={has11 || has12 ? "V0 / GATE 1.0" : "Verdict de l'expérience"}
-              heading={killed ? "Le couple ne tient pas." : "Pas de kill sur ce corpus."}
-              body={
-                has11 || has12
-                  ? `${report.sentence} KFP-001 n'est pas fermé sur 1.0.`
-                  : report.sentence
-              }
-              report={report}
-            />
+            {report ? (
+              <NotaryCard
+                eyebrow={has11 || has12 ? "V0 / GATE 1.0" : "Verdict de l'expérience"}
+                heading={killed ? "Le couple ne tient pas." : "Pas de kill sur ce corpus."}
+                body={
+                  has11 || has12
+                    ? `${report.sentence} KFP-001 n'est pas fermé sur 1.0.`
+                    : report.sentence
+                }
+                report={report}
+              />
+            ) : (
+              <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
+                  {has11 || has12 ? "V0 / GATE 1.0" : "Verdict de l'expérience"}
+                </p>
+                <p className="mt-4 font-mono text-xs text-subtle">Banc 1.0 en cours.</p>
+              </article>
+            )}
             {has11 ? (
               report11 ? (
                 <NotaryCard
@@ -207,7 +217,7 @@ function AttaquePage() {
             ) : null}
           </div>
 
-          {report.killer ? (
+          {report?.killer ? (
             <article className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
                 {has11 || has12 ? "Premier contre-exemple · V0" : "Premier contre-exemple"}
@@ -258,11 +268,20 @@ function AttaquePage() {
                   : "mt-10 grid gap-10 lg:grid-cols-2"
               }
             >
-              <Scoreboard
-                title="Scoreboard V0 / GATE 1.0"
-                blurb="Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir. Kill = le monde est CORROMPU et B part quand même. Claim tué."
-                report={report}
-              />
+              {report ? (
+                <Scoreboard
+                  title="Scoreboard V0 / GATE 1.0"
+                  blurb="Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir. Kill = le monde est CORROMPU et B part quand même. Claim tué."
+                  report={report}
+                />
+              ) : (
+                <section>
+                  <h2 className="font-display text-2xl tracking-tight">
+                    Scoreboard V0 / GATE 1.0
+                  </h2>
+                  <p className="mt-2 font-mono text-xs text-subtle">Banc 1.0 en cours.</p>
+                </section>
+              )}
               {has11 ? (
                 report11 ? (
                   <Scoreboard
@@ -302,36 +321,38 @@ function AttaquePage() {
                 )
               ) : null}
             </div>
-          ) : (
+          ) : report ? (
             <Scoreboard
               title="Scoreboard"
               blurb="Faux REPRENABLE = le monde n'autorise pas, la grille laisse B partir. Kill = le monde est CORROMPU et B part quand même."
               report={report}
               className="mt-10"
             />
-          )}
+          ) : null}
 
-          <section className="mt-12 max-w-2xl">
-            <h2 className="font-display text-2xl tracking-tight">Reset A→B</h2>
-            <p className="mt-3 text-sm text-muted-foreground">{RESET_PROTOCOL.question}</p>
-            <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-              {RESET_PROTOCOL.steps.map((s) => (
-                <li key={s}>{s}</li>
-              ))}
-            </ol>
-            <p className="mt-4 font-mono text-xs text-subtle">
-              Protocole {RESET_PROTOCOL.kind}. Lancé. B n'est pas un LLM — c'est la
-              permission de reprendre. Un kill est un livrable.
-            </p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              wrapNode n'arrête rien. C'est l'observateur. Le couple attaqué est
-              certify() + gateResume().{" "}
-              <Link to="/falsify" className="underline-offset-4 hover:underline">
-                Dossier KFP
-              </Link>
-              .
-            </p>
-          </section>
+          {report ? (
+            <section className="mt-12 max-w-2xl">
+              <h2 className="font-display text-2xl tracking-tight">Reset A→B</h2>
+              <p className="mt-3 text-sm text-muted-foreground">{RESET_PROTOCOL.question}</p>
+              <ol className="mt-4 list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+                {RESET_PROTOCOL.steps.map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ol>
+              <p className="mt-4 font-mono text-xs text-subtle">
+                Protocole {RESET_PROTOCOL.kind}. Lancé. B n'est pas un LLM — c'est la
+                permission de reprendre. Un kill est un livrable.
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                wrapNode n'arrête rien. C'est l'observateur. Le couple attaqué est
+                certify() + gateResume().{" "}
+                <Link to="/falsify" className="underline-offset-4 hover:underline">
+                  Dossier KFP
+                </Link>
+                .
+              </p>
+            </section>
+          ) : null}
         </>
       ) : null}
     </div>

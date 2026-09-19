@@ -4,8 +4,8 @@ import {
   analyze,
   confidenceOf,
   fold,
-  impliesSuccess,
   judge,
+  SUCCESS_TOKENS,
 } from "./engine";
 import type {
   Certificate,
@@ -24,9 +24,20 @@ export const RULESET_11_DOC = [
   "boolean false evidence.status contradicts a success claim",
   "observed/confirmed/rotated all-false contradicts a success claim",
   "code CONTRADICTION_BOOLEAN is critical → CORROMPU",
+  "EN failure form (terminated, killed, crashed, aborted) is not success even if a FR prefix matches",
+  "token termine is FR success ; process terminated is EN failure",
+  "code CONTRADICTION_BILINGUAL is critical → CORROMPU",
 ].join("\n");
 
 const OBSERVATIONAL = ["observ", "confirm", "rotat"] as const;
+
+/** Known EN failure words. Never count as success, even if a FR prefix would match. */
+export const EN_FAILURE_FORMS = [
+  "terminated",
+  "killed",
+  "crashed",
+  "aborted",
+] as const;
 
 interface BoolLeaf {
   key: string;
@@ -61,6 +72,26 @@ function statusAsBoolean(status: unknown): boolean | undefined {
   return typeof status === "boolean" ? status : undefined;
 }
 
+function foldedWords(text: string): string[] {
+  return fold(text).split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+function isEnFailureForm(word: string): boolean {
+  return (EN_FAILURE_FORMS as readonly string[]).includes(word);
+}
+
+/**
+ * V0 success scanner, minus known EN failure forms.
+ * « terminated » must not count as « termine », even if a FR prefix matches.
+ */
+export function impliesSuccess11(text: string): boolean {
+  const words = foldedWords(text).filter((w) => !isEnFailureForm(w));
+  return SUCCESS_TOKENS.some((token) => {
+    const t = fold(token);
+    return words.some((w) => w === t || (t.length >= 4 && w.startsWith(t)));
+  });
+}
+
 /**
  * Polarize JSON booleans in evidence.content (and evidence.status if boolean).
  * Any false boolean in linked evidence is enough when the claim implies success.
@@ -81,7 +112,7 @@ function booleanFindings(h: NormalizedHandoff): Finding[] {
 
   for (const claim of h.canonical.work_done) {
     if (!claim.claim) continue;
-    if (!impliesSuccess(claim.claim)) continue;
+    if (!impliesSuccess11(claim.claim)) continue;
 
     for (const ref of claim.evidence_refs) {
       const ev = byId.get(ref);
@@ -99,8 +130,32 @@ function booleanFindings(h: NormalizedHandoff): Finding[] {
   return findings;
 }
 
+/**
+ * A work_done claim that uses a known EN failure form (terminated, killed,
+ * crashed, aborted) is an EN failure, not FR success. V0's prefix scanner
+ * does not treat « terminated » as « termine » (a≠e) and misses the fail
+ * polarity; 1.1 must not count that word as success, and must CORROMPU.
+ */
+function bilingualFindings(h: NormalizedHandoff): Finding[] {
+  const findings: Finding[] = [];
+
+  for (const [i, claim] of h.canonical.work_done.entries()) {
+    if (!claim.claim) continue;
+    const hits = foldedWords(claim.claim).filter(isEnFailureForm);
+    if (hits.length === 0) continue;
+    findings.push({
+      code: "CONTRADICTION_BILINGUAL",
+      severity: "critical",
+      message: `L'affirmation « ${claim.claim} » décrit un échec EN (« ${hits[0]} »), pas un succès FR (token « termine »).`,
+      path: `work_done[${i}].claim`,
+    });
+  }
+
+  return findings;
+}
+
 export function analyze11(h: NormalizedHandoff): Finding[] {
-  return [...analyze(h), ...booleanFindings(h)];
+  return [...analyze(h), ...booleanFindings(h), ...bilingualFindings(h)];
 }
 
 function unique(items: string[]): string[] {

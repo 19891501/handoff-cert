@@ -129,8 +129,8 @@ function stopCommand(
 /**
  * Grille : certify() puis STOP si le verdict n'est pas REPRENABLE.
  * wrapNode reste l'observateur (silence, pas de juge). gateNode est le couple attaqué.
- * ruleset 1.0 (défaut) : comportement actuel. 1.1 : gateResume(..., "1.1") ; module
- * manquant → fail closed (END) pour 1.1 seulement.
+ * ruleset 1.0 (défaut) : comportement actuel. 1.1 / 1.2 : gateResume(..., ruleset) ;
+ * module manquant → fail closed (END) pour ce ruleset seulement.
  */
 export function gateNode<S extends Record<string, unknown>>(
   nodeName: string,
@@ -155,12 +155,12 @@ export function gateNode<S extends Record<string, unknown>>(
     }
 
     let g;
-    if (ruleset === "1.1") {
+    if (ruleset === "1.1" || ruleset === "1.2") {
       try {
-        g = await gateResume(packet, "1.1");
+        g = await gateResume(packet, ruleset);
       } catch {
         return stopCommand(sealed.command, {
-          continuation_error: "ruleset_1.1_unavailable",
+          continuation_error: `ruleset_${ruleset}_unavailable`,
         });
       }
     } else {

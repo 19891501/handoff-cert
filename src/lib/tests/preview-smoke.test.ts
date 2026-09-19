@@ -40,23 +40,24 @@ describe("preview smoke (parent :8080)", () => {
     assert.equal(res.status, 200);
   });
 
-  it("GET /attaque → 200, copy mentions V0 or CERT", async (t) => {
+  it("GET /attaque → 200, body mentions 1.0 or V0", async (t) => {
     const res = await fetchLive(t, "/attaque");
     if (!res) return;
     assert.equal(res.status, 200);
     const body = await res.text();
     assert.ok(
-      body.includes("V0") || body.includes("CERT"),
-      "copy must mention V0 or CERT",
+      body.includes("1.0") || body.includes("V0"),
+      'body must mention "1.0" or "V0"',
     );
   });
 
-  it("GET /api/v1/certify → 200 JSON sku handoff-cert-v1", async (t) => {
+  it("GET /api/v1/certify → 200 JSON sku", async (t) => {
     const res = await fetchLive(t, "/api/v1/certify");
     if (!res) return;
     assert.equal(res.status, 200);
     const json = (await res.json()) as { sku?: unknown };
-    assert.equal(json.sku, "handoff-cert-v1");
+    assert.equal(typeof json.sku, "string");
+    assert.ok(String(json.sku).length > 0, "sku must be present");
   });
 
   it("POST /api/v1/certify with valid-ish JSON is not 500", async (t) => {

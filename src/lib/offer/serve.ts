@@ -4,7 +4,7 @@ import { issuerSigOnWire, type IssuerSig } from "@/lib/handoff/sign";
 import type { Certificate, PublicCertificate } from "@/lib/handoff/types";
 import { OFFER } from "./catalog";
 
-export type SoldRuleset = "1.0" | "1.1";
+export type SoldRuleset = "1.0" | "1.1" | "1.2";
 
 export type WiredCertificate = PublicCertificate & {
   issuer_sig?: IssuerSig;
@@ -22,6 +22,47 @@ export interface CertifyResponse {
   };
 }
 
+type CertifyFn = (packet: unknown) => Promise<Certificate>;
+
+/** false = import already failed; undefined = not tried; fn = loaded. */
+let certify12Cache: CertifyFn | false | undefined;
+
+function bindCertify12(mod: { certify12?: CertifyFn }): CertifyFn | null {
+  if (typeof mod.certify12 !== "function") return null;
+  const impl = mod.certify12;
+  return (packet) => impl(packet);
+}
+
+/**
+ * Lazy load of certify12. If the module is missing or has no certify12,
+ * return null — never invent a 1.2 judge.
+ */
+async function loadCertify12(): Promise<CertifyFn | null> {
+  if (certify12Cache === false) return null;
+  if (certify12Cache) return certify12Cache;
+
+  const attempts: Array<() => Promise<{ certify12?: CertifyFn }>> = [
+    () => import("../handoff/ruleset12.ts"),
+    () => import("../handoff/ruleset12"),
+    () => import("@/lib/handoff/ruleset12"),
+  ];
+
+  for (const load of attempts) {
+    try {
+      const fn = bindCertify12(await load());
+      if (fn) {
+        certify12Cache = fn;
+        return fn;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  certify12Cache = false;
+  return null;
+}
+
 export function catalogueRulesets(): {
   sku: string;
   ruleset: "1.0";
@@ -30,7 +71,7 @@ export function catalogueRulesets(): {
   return {
     sku: OFFER.sku,
     ruleset: "1.0",
-    rulesets: ["1.0", "1.1"],
+    rulesets: ["1.0", "1.1", "1.2"],
   };
 }
 
@@ -39,7 +80,7 @@ export function parseBodyRuleset(body: unknown): SoldRuleset {
   const raw = (body as { ruleset?: unknown }).ruleset;
   if (raw == null || raw === "") return "1.0";
   const value = String(raw);
-  if (value === "1.0" || value === "1.1") return value;
+  if (value === "1.0" || value === "1.1" || value === "1.2") return value;
   throw new Error(`ruleset inconnu: ${value}`);
 }
 
@@ -70,10 +111,24 @@ function offerBlock() {
   };
 }
 
+async function certifyFor(ruleset: SoldRuleset, packet: unknown): Promise<Certificate> {
+  if (ruleset === "1.2") {
+    const certify12 = await loadCertify12();
+    if (!certify12) {
+      throw new Error(
+        "ruleset 1.2 unavailable: certify12 import failed — 1.2 is not invented",
+      );
+    }
+    return certify12(packet);
+  }
+  if (ruleset === "1.1") return certify11(packet);
+  return certify(packet);
+}
+
 export async function serveCertify(body: unknown): Promise<CertifyResponse> {
   const ruleset = parseBodyRuleset(body);
   const packet = extractPaquet(body);
-  const cert = ruleset === "1.1" ? await certify11(packet) : await certify(packet);
+  const cert = await certifyFor(ruleset, packet);
   return {
     certificate: await withIssuerSig(toPublicCertificate(cert)),
     integrite: "non_fourni",

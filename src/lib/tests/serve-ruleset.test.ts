@@ -14,6 +14,12 @@ function kfp001Packet(): unknown {
   return kfp.packet;
 }
 
+function kfp002Packet(): unknown {
+  const kfp = attackCorpus().find((a) => a.id === "KFP-002");
+  assert.ok(kfp, "KFP-002 absent");
+  return kfp.packet;
+}
+
 describe("serve / HTTP ruleset", () => {
   it("omit ruleset on KFP-001 → REPRENABLE (1.0), sku handoff-cert-v1", async () => {
     const res = await serveCertify({ paquet: kfp001Packet() });
@@ -27,6 +33,26 @@ describe("serve / HTTP ruleset", () => {
     const res = await serveCertify({ paquet: kfp001Packet(), ruleset: "1.1" });
     assert.equal(res.certificate.verdict, "CORROMPU");
     assert.equal(res.certificate.ruleset, "1.1");
+    assert.equal(res.offer.sku, "handoff-cert-v1");
+  });
+
+  it("body with ruleset 1.2 on KFP-001 → CORROMPU, sku still handoff-cert-v1", async () => {
+    const res = await serveCertify({ paquet: kfp001Packet(), ruleset: "1.2" });
+    assert.equal(res.certificate.verdict, "CORROMPU");
+    assert.equal(res.certificate.ruleset, "1.2");
+    assert.equal(res.offer.sku, "handoff-cert-v1");
+    assert.equal(parseBodyRuleset({ paquet: kfp001Packet(), ruleset: "1.2" }), "1.2");
+  });
+
+  it("body with ruleset 1.2 on KFP-002 → CORROMPU ; omit stays 1.0 REPRENABLE", async () => {
+    const omit = await serveCertify({ paquet: kfp002Packet() });
+    assert.equal(omit.certificate.verdict, "REPRENABLE");
+    assert.equal(omit.certificate.ruleset, "1.0");
+    assert.equal(omit.offer.sku, "handoff-cert-v1");
+
+    const res = await serveCertify({ paquet: kfp002Packet(), ruleset: "1.2" });
+    assert.equal(res.certificate.verdict, "CORROMPU");
+    assert.equal(res.certificate.ruleset, "1.2");
     assert.equal(res.offer.sku, "handoff-cert-v1");
   });
 
@@ -48,11 +74,11 @@ describe("serve / HTTP ruleset", () => {
     );
   });
 
-  it("GET catalogue mentions 1.0 and 1.1 ; sold SKU remains 1.0", () => {
+  it("GET catalogue mentions 1.0, 1.1 and 1.2 ; sold SKU remains 1.0", () => {
     const cat = catalogueRulesets();
     assert.equal(cat.sku, "handoff-cert-v1");
     assert.equal(cat.ruleset, "1.0");
-    assert.deepEqual(cat.rulesets, ["1.0", "1.1"]);
+    assert.deepEqual(cat.rulesets, ["1.0", "1.1", "1.2"]);
     assert.equal(OFFER.ruleset, "1.0");
     assert.equal(OFFER.sku, "handoff-cert-v1");
   });

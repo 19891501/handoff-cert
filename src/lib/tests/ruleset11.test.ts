@@ -1,7 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { certify } from "../handoff/engine.ts";
-import { analyze11, certify11, RULESET_11 } from "../handoff/ruleset11.ts";
+import {
+  analyze11,
+  certify11,
+  impliesSuccess11,
+  RULESET_11,
+} from "../handoff/ruleset11.ts";
 import { CORPUS_CASES } from "../handoff/corpus.ts";
 import { getCase } from "../handoff/cases.ts";
 import { normalize } from "../handoff/normalize.ts";
@@ -64,6 +69,42 @@ describe("ruleset 1.1", () => {
     assert.equal(
       v11.findings.some((f) => f.code === "CONTRADICTION_BOOLEAN"),
       false,
+    );
+  });
+
+  it("ATK-TERMINATED : V0 reste REPRENABLE, 1.1 → CORROMPU", async () => {
+    const atk = attackCorpus().find((a) => a.id === "ATK-TERMINATED");
+    assert.ok(atk, "ATK-TERMINATED absent");
+
+    const claim = "The worker process terminated.";
+    assert.equal(impliesSuccess11(claim), false, "1.1 : terminated n'est pas un succès");
+    assert.equal(impliesSuccess11("Le lot est terminé."), true, "1.1 : termine FR reste succès");
+    // V0 prefix (word.startsWith(token)) does not hit terminated⊂termine (a≠e).
+    // The lock is the verdict, not the prefix: V0 stays REPRENABLE.
+
+    const v0 = await certify(atk.packet);
+    assert.equal(v0.verdict, "REPRENABLE", "V0 gelé : terminated ⊂ termine");
+    assert.equal(v0.ruleset, "1.0");
+    assert.equal(
+      v0.findings.some((f) => f.code === "CONTRADICTION_BILINGUAL"),
+      false,
+      "V0 ne polarise pas l'échec EN",
+    );
+
+    const v11 = await certify11(atk.packet);
+    assert.equal(v11.verdict, "CORROMPU", "1.1 : terminated est un échec EN");
+    assert.equal(v11.ruleset, RULESET_11);
+    assert.equal(v11.ruleset, "1.1");
+    assert.ok(
+      v11.findings.some(
+        (f) => f.code === "CONTRADICTION_BILINGUAL" && f.severity === "critical",
+      ),
+      "CONTRADICTION_BILINGUAL critical",
+    );
+
+    const findings = analyze11(normalize(atk.packet));
+    assert.ok(
+      findings.some((f) => f.code === "CONTRADICTION_BILINGUAL" && f.severity === "critical"),
     );
   });
 });

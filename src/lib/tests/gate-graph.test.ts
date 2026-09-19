@@ -16,6 +16,7 @@ function requireAttack(id: string) {
 }
 
 const kfp = requireAttack("KFP-001");
+const kfp2 = requireAttack("KFP-002");
 const fail = requireAttack("CTL-FAIL-TOKEN");
 const node = () => ({ goto: "executor", update: { step: 1 } });
 
@@ -61,6 +62,33 @@ describe("gate-graph", () => {
   it("wrapNode never judges: KFP-001 still goto executor (observer)", async () => {
     const wrapped = wrapNode("planner", node);
     const out = (await wrapped({ packet: kfp.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), "executor");
+    assert.equal(out.update?.continuation_gate, undefined);
+  });
+
+  it("gateNode default 1.0 on KFP-002: still goto executor", async () => {
+    const gated = gateNode("planner", node);
+    const out = (await gated({ packet: kfp2.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), "executor");
+  });
+
+  it("gateNode ruleset 1.2 on KFP-002: goto LANGGRAPH_END", async () => {
+    const gated = gateNode("planner", node, { ruleset: "1.2" });
+    const out = (await gated({ packet: kfp2.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), LANGGRAPH_END);
+    assert.equal(out.update?.continuation_gate, "STOP");
+    assert.equal(out.update?.continuation_verdict, "CORROMPU");
+  });
+
+  it("gateNode ruleset 1.2 on CTL-FAIL-TOKEN: still goto LANGGRAPH_END", async () => {
+    const gated = gateNode("planner", node, { ruleset: "1.2" });
+    const out = (await gated({ packet: fail.packet })) as LangGraphCommand;
+    assert.equal(readGoto(out), LANGGRAPH_END);
+  });
+
+  it("wrapNode never judges: KFP-002 still goto executor (observer)", async () => {
+    const wrapped = wrapNode("planner", node);
+    const out = (await wrapped({ packet: kfp2.packet })) as LangGraphCommand;
     assert.equal(readGoto(out), "executor");
     assert.equal(out.update?.continuation_gate, undefined);
   });

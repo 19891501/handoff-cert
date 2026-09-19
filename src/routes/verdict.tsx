@@ -6,9 +6,9 @@ import { FINAL_VERDICT } from "@/lib/bench/verdict";
 import {
   runAttack,
   runAttack11,
-  runAttack12,
   type AttackReport,
 } from "@/lib/bench/attack";
+import * as attackBench from "@/lib/bench/attack";
 
 export const Route = createFileRoute("/verdict")({ component: VerdictPage });
 
@@ -17,7 +17,8 @@ function getRunAttack11(): (() => Promise<AttackReport>) | null {
 }
 
 function getRunAttack12(): (() => Promise<AttackReport>) | null {
-  return typeof runAttack12 === "function" ? runAttack12 : null;
+  const fn = (attackBench as { runAttack12?: unknown }).runAttack12;
+  return typeof fn === "function" ? (fn as () => Promise<AttackReport>) : null;
 }
 
 const RUN_ATTACK_11 = getRunAttack11();
@@ -161,7 +162,7 @@ function VerdictPage() {
       {has12 ? (
         <article className="mt-6 rounded-xl bg-card p-5 shadow-[var(--shadow-border)] sm:p-8">
           <p className="text-xs font-medium uppercase tracking-[0.18em] text-subtle">
-            1.2 autre notaire
+            Scoreboard 1.2 · autre notaire
           </p>
           <h2 className="mt-3 font-display text-3xl tracking-tight">
             À côté de V0. Pas à sa place.

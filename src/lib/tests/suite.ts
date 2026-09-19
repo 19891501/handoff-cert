@@ -18,7 +18,7 @@ import { BENCH_CASES } from "../handoff/cases.ts";
 import { certify } from "../handoff/engine.ts";
 import { CORPUS_CASES } from "../handoff/corpus.ts";
 import { KNOWN_FALSE, RESET_PROTOCOL, scanKnownFalse } from "../bench/falsify.ts";
-import { attackCorpus, runAttack, runAttack11, runResetAB } from "../bench/attack.ts";
+import { attackCorpus, runAttack, runAttack11, runAttack12, runResetAB } from "../bench/attack.ts";
 import { FAILURE_CLASSES } from "../bench/classes.ts";
 import { scanText, scanValue } from "../bench/markers.ts";
 import { ENGINE_FIXTURES, traceEngine } from "../bench/engine-trace.ts";
@@ -27,7 +27,7 @@ import { CLAIM_ONLY_OK, STATUS_ONLY, statusPolarity } from "../bench/tokens.ts";
 import { OFFER } from "../offer/catalog.ts";
 import { serveCertify } from "../offer/serve.ts";
 import { getCase } from "../handoff/cases.ts";
-import { FINAL_VERDICT, ATTACK_11_NOTE } from "../bench/verdict.ts";
+import { FINAL_VERDICT, ATTACK_11_NOTE, ATTACK_12_NOTE } from "../bench/verdict.ts";
 import { gateResume } from "../bench/gate.ts";
 import {
   AMOUNT_ATOMIC,
@@ -326,6 +326,17 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(r11.nFalseReprenable, ATTACK_11_NOTE.attack11_faux_reprenable, "faux");
     eq(r11.nControlOk, 2, "ctl");
     eq(r11.killer?.attack.id ?? "", ATTACK_11_NOTE.attack11_killer, "killer");
+    eq(FINAL_VERDICT.kills, 4, "gel 1.0 intact");
+  });
+
+  await check("Attaque", "Attaque-12-scoreboard", "runAttack12 aligne ATTACK_12_NOTE, hors gel 1.0", async () => {
+    const r12 = await runAttack12();
+    eq(r12.ruleset, "1.2", "ruleset");
+    eq(r12.n, ATTACK_12_NOTE.attack12_n, "n");
+    eq(r12.nKills, ATTACK_12_NOTE.attack12_kills, "kills");
+    eq(r12.nFalseReprenable, ATTACK_12_NOTE.attack12_faux_reprenable, "faux");
+    eq(r12.nControlOk, 2, "ctl");
+    eq(r12.killer?.attack.id ?? "", ATTACK_12_NOTE.attack12_killer, "killer");
     eq(FINAL_VERDICT.kills, 4, "gel 1.0 intact");
   });
 

@@ -27,15 +27,12 @@ monde est CORROMPU sans token FAIL.
 
 Un ruleset **1.1** existe comme **notaire séparé** (booléens) — expérimental,
 non vendu, jamais un patch silencieux de 1.0. KFP-001 y devient CORROMPU ;
-`terminated ⊂ termine` y survit. Le SKU `handoff-cert-v1` certifie uniquement
-le ruleset **1.0**. Le gel 1.0 reste rouge.
+`terminated ⊂ termine` y survit. Un ruleset **1.2** existe comme **troisième
+notaire** — non vendu, jamais un patch silencieux de V0. Le SKU
+`handoff-cert-v1` certifie uniquement le ruleset **1.0**. Le gel 1.0 reste
+rouge.
 
-> **English.** V0 is frozen. Four known false REPRENABLE cases (KFP-001–004)
-> stay locked. The CERT+GATE claim is dead: KFP-001 is the first
-> counter-example (world CORROMPU, V0 says REPRENABLE, the gate PASSes). Bench:
-> 4 kills / 7 false REPRENABLE / 9 attacks. Ruleset 1.1 is a separate notary
-> (booleans), not a silent patch; 1.0 stays locked red. MIT, not a standard, billing is
-> preview. No published npm package, no paying customers.
+> **English.** V0 is frozen. Four known false REPRENABLE cases (KFP-001–004) stay locked. The CERT+GATE claim is dead: KFP-001 is the first counter-example (world CORROMPU, V0 says REPRENABLE, the gate PASSes). Bench: 4 kills / 7 false REPRENABLE / 9 attacks. Ruleset 1.1 is a separate notary (booleans), not a silent patch; 1.2 is a third notary, not sold, not a silent V0 patch; 1.0 stays locked red. MIT, not a standard, billing is preview. No published npm package, no paying customers.
 
 ## Verdicts
 
