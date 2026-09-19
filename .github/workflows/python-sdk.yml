@@ -1,0 +1,23 @@
+name: python-sdk
+
+on:
+  pull_request:
+    paths:
+      - "sdks/python/**"
+      - ".github/workflows/python-sdk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: unittest (no PyPI)
+        working-directory: sdks/python
+        run: PYTHONPATH=src python3 -m unittest discover -s tests -v
