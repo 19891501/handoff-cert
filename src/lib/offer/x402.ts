@@ -8,6 +8,8 @@ export const USDC_SEPOLIA = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Addr
 export const CHAIN_ID = 84532;
 /** 0.001 USDC — atomic (6 decimals). Aligné sur le prix affiché 0,001 € en testnet. */
 export const AMOUNT_ATOMIC = "1000";
+/** 0.05 USDC — atomic (6 decimals). Aligné sur GATE_SKU.price_eur (grille 1.2). */
+export const GATE_AMOUNT_ATOMIC = "50000";
 
 const TRANSFER_TYPES = {
   TransferWithAuthorization: [
@@ -498,6 +500,18 @@ export async function settlePayment(
 /** Requirements hébergés : jamais ceux du client. Ferme le relais V-01. */
 export function hostedRequirements(resource?: string): PaymentRequirements {
   return requirements(resource);
+}
+
+/** Montant serveur par ruleset. 1.2 = grille ; 1.0/1.1 = reçu. Jamais le client. */
+export function hostedRequirementsFor(
+  ruleset: "1.0" | "1.1" | "1.2",
+  resource?: string,
+): PaymentRequirements {
+  const hosted = hostedRequirements(resource);
+  if (ruleset === "1.2") {
+    return { ...hosted, maxAmountRequired: GATE_AMOUNT_ATOMIC };
+  }
+  return hosted;
 }
 
 export async function admitPayment(

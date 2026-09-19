@@ -1,20 +1,24 @@
+import { GATE_SKU, RECEIPT } from "./mission";
+
 export const OFFER = {
-  sku: "handoff-cert-v1",
+  sku: RECEIPT.sku,
   name: "Certification de reprise",
   unit: "certificat",
-  price_eur: 0.001,
+  price_eur: RECEIPT.price_eur,
   currency: "EUR",
   billing: "preview",
   endpoint: "/api/v1/certify",
-  ruleset: "1.0",
+  ruleset: RECEIPT.ruleset,
   what: "Un verdict machine-readable sur un paquet de handoff. Pas le travail. Pas l'agent.",
   not: [
     "orchestration",
     "choix d'agent",
     "paiement d'équipe",
     "remplacement de workflow",
-    "ruleset 1.1",
+    "vendre V0 comme reprise sûre",
   ],
 } as const;
+
+export const OFFERS = [RECEIPT, GATE_SKU] as const;
 
 export type Offer = typeof OFFER;

@@ -31,9 +31,11 @@ import { FINAL_VERDICT, ATTACK_11_NOTE, ATTACK_12_NOTE } from "../bench/verdict.
 import { gateResume } from "../bench/gate.ts";
 import {
   AMOUNT_ATOMIC,
+  GATE_AMOUNT_ATOMIC,
   admitPayment,
   forgetNonce,
   hostedRequirements,
+  hostedRequirementsFor,
   installNonceLedger,
   paymentRequiredBody,
   parsePaymentHeader,
@@ -42,6 +44,7 @@ import {
   signExact,
   verifyPayment,
 } from "../offer/x402.ts";
+import { GATE_SKU, RECEIPT } from "../offer/mission.ts";
 import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -428,6 +431,29 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(hostedRequirements().payTo, requirements().payTo, "V-01 serveur");
     if (hostedRequirements().payTo.toLowerCase() === attacker.payTo.toLowerCase() && attacker.payTo !== requirements().payTo) {
       fail("requirements client acceptés");
+    }
+  });
+
+  await check("x402", "two-amounts", "reçu 1000 ; grille 1.2 = 50000 ; défaut = reçu", () => {
+    eq(GATE_AMOUNT_ATOMIC, "50000", "gate atomic");
+    eq(AMOUNT_ATOMIC, "1000", "receipt atomic");
+    eq(hostedRequirements().maxAmountRequired, AMOUNT_ATOMIC, "default receipt");
+    eq(hostedRequirementsFor("1.0").maxAmountRequired, AMOUNT_ATOMIC, "1.0");
+    eq(hostedRequirementsFor("1.1").maxAmountRequired, AMOUNT_ATOMIC, "1.1");
+    eq(hostedRequirementsFor("1.2").maxAmountRequired, GATE_AMOUNT_ATOMIC, "1.2");
+    eq(Number(GATE_AMOUNT_ATOMIC) / 1_000_000, GATE_SKU.price_eur, "align GATE_SKU");
+    eq(Number(AMOUNT_ATOMIC) / 1_000_000, RECEIPT.price_eur, "align RECEIPT");
+    eq(hostedRequirementsFor("1.2").payTo, hostedRequirements().payTo, "V-01 1.2");
+    const attacker = {
+      ...requirements(),
+      maxAmountRequired: "1",
+      payTo: "0x0000000000000000000000000000000000000123" as const,
+    };
+    if (hostedRequirementsFor("1.2").maxAmountRequired === attacker.maxAmountRequired) {
+      fail("requirements client acceptés");
+    }
+    if (hostedRequirementsFor("1.2").payTo === attacker.payTo) {
+      fail("payTo client accepté");
     }
   });
 

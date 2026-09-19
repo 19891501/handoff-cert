@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OFFER } from "@/lib/offer/catalog";
+import { GATE_SKU, RECEIPT } from "@/lib/offer/mission";
 import { getCase } from "@/lib/handoff/cases";
 
 export const Route = createFileRoute("/offre")({ component: OffrePage });
@@ -85,8 +86,25 @@ function OffrePage() {
       </h1>
       <p className="mt-3 max-w-2xl text-base text-muted-foreground">{OFFER.what}</p>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Le SKU certifie le ruleset 1.0 ; 1.1 et 1.2, s'ils apparaissent, sont des notaires expérimentaux non vendus — pas un patch silencieux de V0.
+        Deux SKU. Le reçu 1.0 est gelé et honnête : pas une grille. La grille
+        1.2 est le produit qui encaisse. Licence d'émetteur : objectif, pas
+        encore encaissée. Preview : on n'invente pas de chiffre d'affaires.
       </p>
+
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+          <Badge tone="partiel">{RECEIPT.sku}</Badge>
+          <h2 className="mt-3 font-display text-2xl tracking-tight">{RECEIPT.name}</h2>
+          <p className="mt-2 font-display text-3xl tracking-tight">{RECEIPT.price_eur} €</p>
+          <p className="mt-2 text-sm text-muted-foreground">{RECEIPT.role}</p>
+        </article>
+        <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">
+          <Badge tone="reprenable">{GATE_SKU.sku}</Badge>
+          <h2 className="mt-3 font-display text-2xl tracking-tight">{GATE_SKU.name}</h2>
+          <p className="mt-2 font-display text-3xl tracking-tight">{GATE_SKU.price_eur.toFixed(2)} €</p>
+          <p className="mt-2 text-sm text-muted-foreground">{GATE_SKU.role}</p>
+        </article>
+      </div>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         <article className="rounded-xl bg-card p-5 shadow-[var(--shadow-border)]">

@@ -14,6 +14,7 @@ import { Route as AdoptRouteImport } from './routes/adopt'
 import { Route as AttaqueRouteImport } from './routes/attaque'
 import { Route as BenchmarkRouteImport } from './routes/benchmark'
 import { Route as BlindRouteImport } from './routes/blind'
+import { Route as CapRouteImport } from './routes/cap'
 import { Route as CertifyRouteImport } from './routes/certify'
 import { Route as ClassesRouteImport } from './routes/classes'
 import { Route as CorpusRouteImport } from './routes/corpus'
@@ -59,6 +60,11 @@ const BenchmarkRoute = BenchmarkRouteImport.update({
 const BlindRoute = BlindRouteImport.update({
   id: '/blind',
   path: '/blind',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CapRoute = CapRouteImport.update({
+  id: '/cap',
+  path: '/cap',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CertifyRoute = CertifyRouteImport.update({
@@ -173,6 +179,7 @@ export interface FileRoutesByFullPath {
   '/attaque': typeof AttaqueRoute
   '/benchmark': typeof BenchmarkRoute
   '/blind': typeof BlindRoute
+  '/cap': typeof CapRoute
   '/certify': typeof CertifyRoute
   '/classes': typeof ClassesRoute
   '/corpus': typeof CorpusRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/attaque': typeof AttaqueRoute
   '/benchmark': typeof BenchmarkRoute
   '/blind': typeof BlindRoute
+  '/cap': typeof CapRoute
   '/certify': typeof CertifyRoute
   '/classes': typeof ClassesRoute
   '/corpus': typeof CorpusRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/attaque': typeof AttaqueRoute
   '/benchmark': typeof BenchmarkRoute
   '/blind': typeof BlindRoute
+  '/cap': typeof CapRoute
   '/certify': typeof CertifyRoute
   '/classes': typeof ClassesRoute
   '/corpus': typeof CorpusRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
     | '/attaque'
     | '/benchmark'
     | '/blind'
+    | '/cap'
     | '/certify'
     | '/classes'
     | '/corpus'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/attaque'
     | '/benchmark'
     | '/blind'
+    | '/cap'
     | '/certify'
     | '/classes'
     | '/corpus'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '/attaque'
     | '/benchmark'
     | '/blind'
+    | '/cap'
     | '/certify'
     | '/classes'
     | '/corpus'
@@ -345,6 +357,7 @@ export interface RootRouteChildren {
   AttaqueRoute: typeof AttaqueRoute
   BenchmarkRoute: typeof BenchmarkRoute
   BlindRoute: typeof BlindRoute
+  CapRoute: typeof CapRoute
   CertifyRoute: typeof CertifyRoute
   ClassesRoute: typeof ClassesRoute
   CorpusRoute: typeof CorpusRoute
@@ -403,6 +416,13 @@ declare module '@tanstack/react-router' {
       path: '/blind'
       fullPath: '/blind'
       preLoaderRoute: typeof BlindRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cap': {
+      id: '/cap'
+      path: '/cap'
+      fullPath: '/cap'
+      preLoaderRoute: typeof CapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/certify': {
@@ -561,6 +581,7 @@ const rootRouteChildren: RootRouteChildren = {
   AttaqueRoute: AttaqueRoute,
   BenchmarkRoute: BenchmarkRoute,
   BlindRoute: BlindRoute,
+  CapRoute: CapRoute,
   CertifyRoute: CertifyRoute,
   ClassesRoute: ClassesRoute,
   CorpusRoute: CorpusRoute,

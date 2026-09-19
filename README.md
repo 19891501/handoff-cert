@@ -1,5 +1,26 @@
 # HANDOFF CERT
 
+**Cap commercial · horizon 2030.** Le TLS des reprises d'agents.
+
+Chaque `goto` A→B exige un certificat payé. Un handoff d'agent sans sceau est
+un HTTP sans TLS. Le volume n'est pas des sièges : c'est chaque reprise.
+
+Objectifs : **1 milliard de certificats / an**, **gateNode dans 10 000 graphes**
+en production, **50 M€ / an**. Micro-paiement 1.2 + licences d'émetteur signé.
+Pas un SaaS de sièges.
+
+V0 est le **reçu gelé**, pas une grille de sécurité. On ne vend pas « B ne part
+pas à tort ». **1.2** (`handoff-gate-v12`) est la **grille payée** : **0,05 €**.
+**1.0** (`handoff-cert-v1`) est le **reçu** : **0,001 €**. Facturation
+`preview`. Aucun client payant. Licence MIT. Pas un standard.
+
+> **English.** Horizon 2030: TLS of agent handoffs. Target: 1B certs/year,
+> gateNode in 10k production graphs, €50M/year. V0 is a frozen receipt, **not**
+> a safety gate. The paid grille is ruleset **1.2** at €0.05
+> (`handoff-gate-v12`). Ruleset **1.0** is the receipt at €0.001
+> (`handoff-cert-v1`). Billing is `preview`. No paying customers claimed. MIT,
+> not a standard.
+
 Couche de certification entre deux unités de travail autonomes.
 
 Une machine termine une partie du travail. Une autre doit reprendre.
@@ -7,8 +28,6 @@ HANDOFF certifie si le paquet contient assez d’état, de preuves et de reste
 pour le faire **sans reconstruire l’histoire**.
 
 Il ne fait pas le travail. Il ne choisit pas l’agent. Il ne paie personne.
-Ce n’est pas un standard. Facturation : `preview`. Licence MIT.
-Pas de paquet npm publié, pas de clients payants.
 
 ```
 AGENT A  →  POST /api/v1/certify  →  certificat  →  AGENT B
@@ -27,12 +46,13 @@ monde est CORROMPU sans token FAIL.
 
 Un ruleset **1.1** existe comme **notaire séparé** (booléens) — expérimental,
 non vendu, jamais un patch silencieux de 1.0. KFP-001 y devient CORROMPU ;
-`terminated ⊂ termine` y survit. Un ruleset **1.2** existe comme **troisième
-notaire** — non vendu, jamais un patch silencieux de V0. Le SKU
-`handoff-cert-v1` certifie uniquement le ruleset **1.0**. Le gel 1.0 reste
-rouge.
+`terminated ⊂ termine` y survit. Un ruleset **1.2** existe comme **grille
+payée** — jamais un patch silencieux de V0. Le SKU `handoff-cert-v1` certifie
+le ruleset **1.0** (reçu, 0,001 €). Le SKU `handoff-gate-v12` certifie le
+ruleset **1.2** (grille, 0,05 €). Le gel 1.0 reste rouge. Facturation
+`preview`. Pas de clients payants.
 
-> **English.** V0 is frozen. Four known false REPRENABLE cases (KFP-001–004) stay locked. The CERT+GATE claim is dead: KFP-001 is the first counter-example (world CORROMPU, V0 says REPRENABLE, the gate PASSes). Bench: 4 kills / 7 false REPRENABLE / 9 attacks. Ruleset 1.1 is a separate notary (booleans), not a silent patch; 1.2 is a third notary, not sold, not a silent V0 patch; 1.0 stays locked red. MIT, not a standard, billing is preview. No published npm package, no paying customers.
+> **English.** V0 is frozen. Four known false REPRENABLE cases (KFP-001–004) stay locked. The CERT+GATE claim is dead: KFP-001 is the first counter-example (world CORROMPU, V0 says REPRENABLE, the gate PASSes). Bench: 4 kills / 7 false REPRENABLE / 9 attacks. Ruleset 1.1 is a separate notary (booleans), not a silent patch. 1.2 is the paid grille (€0.05), not a silent V0 patch. 1.0 stays the locked-red receipt (€0.001). MIT, not a standard, billing is preview. No published npm package, no paying customers.
 
 ## Verdicts
 
@@ -62,8 +82,10 @@ Réponse : deux couches, jamais fusionnées.
 }
 ```
 
-SKU `handoff-cert-v1` · ruleset `1.0` · **0,001 € / certificat** · facturation
-`preview` tant que `X402_PAY_TO` n’est pas posé.
+SKU `handoff-cert-v1` · ruleset `1.0` · **0,001 € / certificat** · reçu gelé.
+SKU `handoff-gate-v12` · ruleset `1.2` · **0,05 € / certificat** · grille payée.
+Facturation `preview` tant que `X402_PAY_TO` n’est pas posé. Aucun client
+payant.
 
 ## x402 (Base Sepolia)
 
@@ -124,9 +146,9 @@ npm test
 npm run dev
 ```
 
-Interface : Accueil · Offre · Certifier · Falsification · Adopter · Verdict.
+Interface : Accueil · Cap · Offre · Certifier · Falsification · Adopter · Verdict.
 
 ## Licence
 
 MIT. Pas un standard. Le juge V0 est gelé : une PR qui fait disparaître un KFP
-sans changer le ruleset est une régression.
+sans changer le ruleset est une régression. V0 n’est pas une grille de sécurité.

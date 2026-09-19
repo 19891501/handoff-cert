@@ -37,23 +37,24 @@ function Home() {
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:py-16">
       <p className="reveal text-xs font-medium uppercase tracking-[0.22em] text-subtle">
-        Verdict final · {FINAL_VERDICT.date} · V0 gelé
+        Cap 2030 · TLS des reprises · V0 gelé
       </p>
       <h1 className="reveal reveal-1 mt-4 max-w-3xl font-display text-4xl leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
-        On certifie. On n'arrête pas B à tort.
+        On certifie. On encaisse. On n'arrête pas B à tort sur 1.0.
       </h1>
       <p className="reveal reveal-2 mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-        {FINAL_VERDICT.phrase}
+        {FINAL_VERDICT.phrase} Le volume, c'est chaque goto. La grille
+        vendue, c'est 1.2.
       </p>
       <div className="reveal reveal-3 mt-8 flex flex-wrap gap-3">
         <Button asChild>
-          <Link to="/verdict">
-            Lire le verdict
+          <Link to="/cap">
+            Le cap
             <ArrowRight />
           </Link>
         </Button>
         <Button asChild variant="outline">
-          <Link to="/attaque">Banc CERT+GATE</Link>
+          <Link to="/offre">Les SKU</Link>
         </Button>
       </div>
 
