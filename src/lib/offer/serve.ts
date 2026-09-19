@@ -2,7 +2,7 @@ import { certify, toPublicCertificate, verify } from "@/lib/handoff/engine";
 import { certify11 } from "@/lib/handoff/ruleset11";
 import { issuerSigOnWire, type IssuerSig } from "@/lib/handoff/sign";
 import type { Certificate, PublicCertificate } from "@/lib/handoff/types";
-import { OFFER } from "./catalog";
+import { OFFER, OFFERS } from "./catalog";
 
 export type SoldRuleset = "1.0" | "1.1" | "1.2";
 
@@ -67,11 +67,27 @@ export function catalogueRulesets(): {
   sku: string;
   ruleset: "1.0";
   rulesets: SoldRuleset[];
+  skus: {
+    sku: string;
+    name: string;
+    ruleset: "1.0" | "1.2";
+    price_eur: number;
+    role: string;
+    sold: boolean;
+  }[];
 } {
   return {
     sku: OFFER.sku,
     ruleset: "1.0",
     rulesets: ["1.0", "1.1", "1.2"],
+    skus: OFFERS.map((o) => ({
+      sku: o.sku,
+      name: o.name,
+      ruleset: o.ruleset,
+      price_eur: o.price_eur,
+      role: o.role,
+      sold: o.sold,
+    })),
   };
 }
 

@@ -24,8 +24,8 @@ import { scanText, scanValue } from "../bench/markers.ts";
 import { ENGINE_FIXTURES, traceEngine } from "../bench/engine-trace.ts";
 import { judge } from "../handoff/engine.ts";
 import { CLAIM_ONLY_OK, STATUS_ONLY, statusPolarity } from "../bench/tokens.ts";
-import { OFFER } from "../offer/catalog.ts";
-import { serveCertify } from "../offer/serve.ts";
+import { OFFER, OFFERS } from "../offer/catalog.ts";
+import { catalogueRulesets, serveCertify } from "../offer/serve.ts";
 import { getCase } from "../handoff/cases.ts";
 import { FINAL_VERDICT, ATTACK_11_NOTE, ATTACK_12_NOTE } from "../bench/verdict.ts";
 import { gateResume } from "../bench/gate.ts";
@@ -389,6 +389,24 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(res.certificate.verdict, "REPRENABLE", "verdict");
     eq(res.offer.billing, "preview", "pas de 402 faux");
     if ("findings" in (res.certificate as object)) fail("le public n'expose pas findings");
+  });
+
+  await check("Offre", "catalogue-skus", "GET catalogue : reçu 1.0 0.001 et grille 1.2 0.05", () => {
+    const cat = catalogueRulesets();
+    eq(cat.sku, RECEIPT.sku, "défaut reçu");
+    eq(cat.ruleset, "1.0", "ruleset défaut");
+    eq(cat.skus.length, 2, "deux SKUs");
+    eq(OFFERS.length, 2, "OFFERS");
+    const receipt = cat.skus.find((s) => s.sku === RECEIPT.sku);
+    const gate = cat.skus.find((s) => s.sku === GATE_SKU.sku);
+    if (!receipt) fail("reçu absent");
+    if (!gate) fail("grille absente");
+    eq(receipt.ruleset, "1.0", "reçu ruleset");
+    eq(receipt.price_eur, 0.001, "reçu prix");
+    eq(receipt.price_eur, RECEIPT.price_eur, "align mission reçu");
+    eq(gate.ruleset, "1.2", "grille ruleset");
+    eq(gate.price_eur, 0.05, "grille prix");
+    eq(gate.price_eur, GATE_SKU.price_eur, "align mission grille");
   });
 
   await check("Tokens", "families", "status true ≠ claim true ; confirme claim-only", () => {
