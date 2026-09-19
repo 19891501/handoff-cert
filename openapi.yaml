@@ -1,0 +1,921 @@
+openapi: 3.0.3
+info:
+  title: HANDOFF CERT
+  version: "1.0.0"
+  description: |
+    **Cap commercial · horizon 2030.** Le TLS des reprises d'agents.
+
+    `POST /api/v1/certify` vend un verdict machine-readable sur un paquet de
+    handoff A→B. Il ne fait pas le travail. Il ne choisit pas l'agent.
+    Il ne paie personne.
+
+    ## Rulesets
+
+    | Ruleset | Rôle | SKU | Prix | x402 atomic (USDC 6 décimales) |
+    |---|---|---|---|---|
+    | **1.0** (défaut) | Reçu gelé — rejouable, pas une grille | `handoff-cert-v1` | 0,001 € | `"1000"` |
+    | **1.1** | Notaire séparé (booléens) — expérimental, jamais un patch silencieux de 1.0 | `handoff-cert-v1` | 0,001 € | `"1000"` |
+    | **1.2** | Grille payée — B ne part que si 1.2 dit REPRENABLE | `handoff-gate-v12` | 0,05 € | `"50000"` |
+
+    Omettre `ruleset`, `null` ou `""` ⇒ **1.0**. Valeur inconnue ⇒ **400**.
+
+    V0 (1.0) n'est **pas** une grille de sécurité. On ne vend pas « B ne part
+    pas à tort ». Le claim CERT+GATE est tué (KFP-001). 1.2 est la grille.
+
+    ## Ordre d'évaluation (POST)
+
+    1. Parser le JSON — illisible ⇒ **400** `{ "erreur": "JSON invalide" }`.
+       Un body illisible **ne déclenche pas** le 402.
+    2. `parseBodyRuleset` — inconnu ⇒ **400** `{ "erreur": "ruleset inconnu: …" }`.
+    3. `gateCertify` — si `X402_PAY_TO` est posé et le paiement manque / échoue
+       ⇒ **402** (corps x402 v1 ci-dessous).
+    4. `serveCertify` — juge 1.0 / 1.1 / 1.2 ⇒ **200**, ou **400** si le juge
+       refuse (ex. 1.2 indisponible).
+
+    Preview (`X402_PAY_TO` vide) : POST reste **200**, `payment.billing = "preview"`.
+    Aucun client payant. Licence MIT. Pas un standard.
+  contact:
+    name: HANDOFF CERT
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+externalDocs:
+  description: Dépôt — V0 gelé, falsification KFP-001–004, x402 facilitator
+  url: https://github.com/19891501/handoff-cert
+
+servers:
+  - url: http://localhost:8080
+    description: Preview local (facturation preview tant que X402_PAY_TO est vide)
+
+tags:
+  - name: certify
+    description: Catalogue et certification d'un paquet de reprise.
+  - name: x402
+    description: "Paiement HTTP 402 — spec v1 `exact` / EIP-3009 USDC Base Sepolia."
+
+paths:
+  /api/v1/certify:
+    get:
+      tags: [certify, x402]
+      operationId: getCertifyCatalogue
+      summary: Catalogue public du SKU et des rulesets vendus
+      description: |
+        Découverte. SKU vendu = `handoff-cert-v1` (ruleset **1.0**).
+        `rulesets` liste 1.0, 1.1 et 1.2. `x402.accepts` décrit le reçu
+        (1000 atomic). La grille 1.2 (50000 atomic) est `hostedRequirementsFor("1.2")`.
+      responses:
+        "200":
+          description: Catalogue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Catalogue"
+              example:
+                sku: handoff-cert-v1
+                endpoint: /api/v1/certify
+                price_eur: 0.001
+                billing: preview
+                method: POST
+                ruleset: "1.0"
+                rulesets: ["1.0", "1.1", "1.2"]
+                x402:
+                  network: base-sepolia
+                  amount: "1000"
+                  payTo: null
+                  enforced: false
+                  facilitator: /api/x402
+                  ledger:
+                    table: x402_nonces
+                    key: [network, payer, nonce]
+                    backend: memory
+                    settle_replay: same_transaction
+                    verify_consumed: nonce_replay
+                    verify_consumes: false
+                  accepts:
+                    - scheme: exact
+                      network: base-sepolia
+                      maxAmountRequired: "1000"
+                      asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                      payTo: "0x0000000000000000000000000000000000000000"
+                      resource: /api/v1/certify
+                      description: "HANDOFF CERT — un certificat"
+                      mimeType: application/json
+                      maxTimeoutSeconds: 60
+                      extra: { name: USDC, version: "2" }
+
+    post:
+      tags: [certify, x402]
+      operationId: postCertify
+      summary: Certifier un paquet de handoff
+      description: |
+        Juge le paquet selon `ruleset` (défaut **1.0**). Réponse à deux couches
+        jamais fusionnées : `certificate` (verdict) et `integrite` (`non_fourni`).
+
+        Avec `X402_PAY_TO=0x…`, le header `X-PAYMENT` (ou `PAYMENT-SIGNATURE`)
+        est exigé **après** un JSON valide. Replay d'un nonce déjà settled ⇒
+        `nonce_consumed` (402, pas un second certificat). Requirements **hébergés**
+        : jamais le `payTo` ni le montant du client.
+      parameters:
+        - $ref: "#/components/parameters/XPayment"
+        - $ref: "#/components/parameters/PaymentSignature"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CertifyRequest"
+            examples:
+              receipt10:
+                summary: 1.0 défaut — reçu gelé
+                value:
+                  paquet:
+                    from: agent-a
+                    to: agent-b
+                    task: "reprendre le graphe"
+                    work_done: []
+                    work_remaining: ["suite"]
+              explicit10:
+                summary: 1.0 explicite
+                value:
+                  ruleset: "1.0"
+                  paquet:
+                    from: a
+                    to: b
+                    task: "…"
+                    work_done: []
+                    work_remaining: ["suite"]
+              notary11:
+                summary: 1.1 — notaire booléens
+                value:
+                  ruleset: "1.1"
+                  paquet:
+                    from: a
+                    to: b
+                    task: { objective: "ship", critical: true }
+                    work_done:
+                      - claim: "tests passed"
+                        evidence_refs: ["e1"]
+                        critical: true
+                    evidence:
+                      - id: e1
+                        type: test
+                        content: { ok: false }
+                        content_hash: ""
+                        timestamp: "2026-09-18T00:00:00Z"
+                        source: ci
+                        status: fail
+                    work_remaining: ["fix"]
+              grille12:
+                summary: 1.2 — grille payée (0,05 € / 50000 atomic)
+                value:
+                  ruleset: "1.2"
+                  paquet:
+                    from: a
+                    to: b
+                    task: "…"
+                    work_done: []
+                    work_remaining: ["suite"]
+      responses:
+        "200":
+          description: |
+            Certificat public. `offer.sku` reste `handoff-cert-v1` (reçu).
+            Le ruleset jugé est dans `certificate.ruleset`.
+            `payment` = `{ billing: "preview" }` si non enforcé ;
+            sinon `{ payer, transaction, network }`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertifyResponse"
+              examples:
+                preview10:
+                  summary: Preview 1.0 REPRENABLE
+                  value:
+                    certificate:
+                      verdict: REPRENABLE
+                      confidence: 0.99
+                      missing: []
+                      conflicts: []
+                      warnings: []
+                      certificate_id: hc_df45ac2bb6f2
+                      ruleset: "1.0"
+                      input_hash: "sha256:df45ac2bb6f22bec98cb1397d05979a0d1709aa11157c58424ce1c0afa865e67"
+                      timestamp: "2026-09-19T07:45:35.562Z"
+                    integrite: non_fourni
+                    offer:
+                      sku: handoff-cert-v1
+                      price_eur: 0.001
+                      currency: EUR
+                      billing: preview
+                      unit: certificat
+                    payment:
+                      billing: preview
+                paid:
+                  summary: Enforcé — paiement settled
+                  value:
+                    certificate:
+                      verdict: PARTIEL
+                      confidence: 0.4
+                      missing: ["work_remaining"]
+                      conflicts: []
+                      warnings: []
+                      certificate_id: hc_abc123
+                      ruleset: "1.2"
+                      input_hash: "sha256:00"
+                      timestamp: "2026-09-19T00:00:00.000Z"
+                    integrite: non_fourni
+                    offer:
+                      sku: handoff-cert-v1
+                      price_eur: 0.001
+                      currency: EUR
+                      billing: x402
+                      unit: certificat
+                    payment:
+                      payer: "0x1111111111111111111111111111111111111111"
+                      transaction: "0xdeadbeef"
+                      network: base-sepolia
+        "400":
+          description: |
+            JSON invalide, ruleset inconnu, ou certification impossible
+            (ex. `ruleset 1.2 unavailable: certify12 import failed — 1.2 is not invented`).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Erreur"
+              examples:
+                json:
+                  value: { erreur: "JSON invalide" }
+                ruleset:
+                  value: { erreur: "ruleset inconnu: 2.0" }
+                juge:
+                  value:
+                    erreur: "ruleset 1.2 unavailable: certify12 import failed — 1.2 is not invented"
+        "402":
+          description: |
+            Paiement requis ou rejeté. Corps **x402 v1** (`exact` / EIP-3009).
+            `accepts` est hébergé côté serveur — jamais le `payTo` du client.
+
+            `maxAmountRequired` :
+            - `"1000"` — ruleset 1.0 / 1.1 (reçu, 0,001 USDC testnet)
+            - `"50000"` — ruleset 1.2 (grille, 0,05 USDC testnet)
+
+            Erreurs fréquentes : `X-PAYMENT header is required`, `nonce_consumed`
+            (replay ≠ second certificat), `nonce_replay` (verify ne consomme pas),
+            `amount_mismatch`, `payTo_mismatch`, `window_expired`, `bad_signature`,
+            `no_settler_key` (pas de hash inventé), `settle_pending`, `settle_failed`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentRequired"
+              examples:
+                missingHeader:
+                  summary: Header X-PAYMENT absent
+                  value:
+                    x402Version: 1
+                    error: "X-PAYMENT header is required"
+                    accepts:
+                      - scheme: exact
+                        network: base-sepolia
+                        maxAmountRequired: "1000"
+                        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                        payTo: "0x0000000000000000000000000000000000000000"
+                        resource: /api/v1/certify
+                        description: "HANDOFF CERT — un certificat"
+                        mimeType: application/json
+                        maxTimeoutSeconds: 60
+                        extra: { name: USDC, version: "2" }
+                grille12:
+                  summary: 1.2 — montant grille 50000
+                  value:
+                    x402Version: 1
+                    error: "X-PAYMENT header is required"
+                    accepts:
+                      - scheme: exact
+                        network: base-sepolia
+                        maxAmountRequired: "50000"
+                        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                        payTo: "0x0000000000000000000000000000000000000000"
+                        resource: /api/v1/certify
+                        description: "HANDOFF CERT — un certificat"
+                        mimeType: application/json
+                        maxTimeoutSeconds: 60
+                        extra: { name: USDC, version: "2" }
+                nonceConsumed:
+                  summary: Replay — nonce déjà settled
+                  value:
+                    x402Version: 1
+                    error: nonce_consumed
+                    accepts:
+                      - scheme: exact
+                        network: base-sepolia
+                        maxAmountRequired: "1000"
+                        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+                        payTo: "0x0000000000000000000000000000000000000000"
+                        resource: /api/v1/certify
+                        description: "HANDOFF CERT — un certificat"
+                        mimeType: application/json
+                        maxTimeoutSeconds: 60
+                        extra: { name: USDC, version: "2" }
+                    settlement:
+                      success: true
+                      payer: "0x1111111111111111111111111111111111111111"
+                      transaction: "0xabc"
+                      network: base-sepolia
+                      replay: true
+
+components:
+  parameters:
+    XPayment:
+      name: X-PAYMENT
+      in: header
+      required: false
+      description: |
+        Payload x402 v1 (JSON ou JSON base64). Exigé si `X402_PAY_TO` est posé.
+        Préféré à `PAYMENT-SIGNATURE`.
+      schema:
+        type: string
+    PaymentSignature:
+      name: PAYMENT-SIGNATURE
+      in: header
+      required: false
+      description: "Alias x402 du header `X-PAYMENT` (même payload)."
+      schema:
+        type: string
+
+  schemas:
+    Ruleset:
+      type: string
+      enum: ["1.0", "1.1", "1.2"]
+      default: "1.0"
+      description: |
+        1.0 = reçu gelé (défaut). 1.1 = notaire booléens. 1.2 = grille payée.
+
+    Verdict:
+      type: string
+      enum: [REPRENABLE, PARTIEL, CORROMPU]
+      description: |
+        REPRENABLE — assez d'état, de preuves et de reste selon le ruleset,
+        pas selon la vérité du monde.
+        PARTIEL — information requise manquante.
+        CORROMPU — affirmation contredite ; continuer propagerait l'erreur.
+        Faux REPRENABLE = erreur critique.
+
+    Address:
+      type: string
+      pattern: "^0x[0-9a-fA-F]{40}$"
+      example: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+
+    Hex:
+      type: string
+      pattern: "^0x[0-9a-fA-F]+$"
+
+    Bytes32:
+      type: string
+      pattern: "^0x[0-9a-fA-F]{64}$"
+
+    TaskSpec:
+      type: object
+      additionalProperties: true
+      properties:
+        objective:
+          type: string
+        constraints:
+          type: array
+          items:
+            type: string
+        critical:
+          type: boolean
+      description: Objet ou chaîne. Le normaliseur accepte les deux.
+
+    StateSpec:
+      type: object
+      additionalProperties: true
+      properties:
+        known:
+          type: object
+          additionalProperties: true
+        unknown:
+          type: array
+          items:
+            type: string
+        version:
+          type: string
+
+    WorkClaim:
+      type: object
+      additionalProperties: true
+      properties:
+        claim:
+          type: string
+        evidence_refs:
+          type: array
+          items:
+            type: string
+        critical:
+          type: boolean
+
+    EvidenceItem:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        content: {}
+        content_hash:
+          type: string
+        timestamp:
+          type: string
+        source:
+          type: string
+        status:
+          type: string
+
+    Paquet:
+      type: object
+      additionalProperties: true
+      description: |
+        Paquet de handoff. Le juge normalise ; les champs manquants sont
+        fail-closed. Forme canonique documentée ci-dessous.
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        task:
+          oneOf:
+            - $ref: "#/components/schemas/TaskSpec"
+            - type: string
+        state:
+          $ref: "#/components/schemas/StateSpec"
+        work_done:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/WorkClaim"
+              - type: string
+        work_remaining:
+          type: array
+          items:
+            type: string
+        evidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceItem"
+        uncertainties:
+          type: array
+          items:
+            type: string
+
+    CertifyRequest:
+      type: object
+      additionalProperties: true
+      description: |
+        Soit `{ "paquet": <Paquet>, "ruleset"?: "1.0"|"1.1"|"1.2" }`,
+        soit le paquet à la racine avec `ruleset` optionnel.
+        `ruleset` omis / null / "" ⇒ 1.0.
+      properties:
+        ruleset:
+          $ref: "#/components/schemas/Ruleset"
+        paquet:
+          $ref: "#/components/schemas/Paquet"
+
+    IssuerSig:
+      type: object
+      required: [signature, key_id]
+      additionalProperties: false
+      description: |
+        Signature d'émetteur sur les champs publics (JCS de
+        certificate_id, input_hash, ruleset, verdict). Ed25519 si dispo,
+        sinon HMAC-SHA256. Absente si ISSUER_SECRET / ISSUER_ED25519_KEY
+        non posés — jamais un faux MAC. Ce n'est pas l'identité de l'agent A.
+        `integrite` reste `non_fourni`.
+      properties:
+        signature:
+          type: string
+          description: Hex
+        key_id:
+          type: string
+          description: "`ed25519:<16 hex>` ou `hmac-sha256:<16 hex>`"
+
+    PublicCertificate:
+      type: object
+      required:
+        - verdict
+        - confidence
+        - missing
+        - conflicts
+        - warnings
+        - certificate_id
+        - ruleset
+        - input_hash
+        - timestamp
+      properties:
+        verdict:
+          $ref: "#/components/schemas/Verdict"
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        missing:
+          type: array
+          items:
+            type: string
+        conflicts:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        certificate_id:
+          type: string
+          pattern: "^hc_[0-9a-f]+$"
+        ruleset:
+          $ref: "#/components/schemas/Ruleset"
+        input_hash:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        timestamp:
+          type: string
+          format: date-time
+        issuer_sig:
+          $ref: "#/components/schemas/IssuerSig"
+
+    Offer:
+      type: object
+      required: [sku, price_eur, currency, billing, unit]
+      properties:
+        sku:
+          type: string
+          example: handoff-cert-v1
+        price_eur:
+          type: number
+          example: 0.001
+        currency:
+          type: string
+          enum: [EUR]
+        billing:
+          type: string
+          enum: [preview, x402]
+          description: "`x402` si `X402_PAY_TO` est posé, sinon `preview`."
+        unit:
+          type: string
+          example: certificat
+
+    PaymentPreview:
+      type: object
+      required: [billing]
+      additionalProperties: false
+      properties:
+        billing:
+          type: string
+          enum: [preview]
+
+    PaymentSettled:
+      type: object
+      required: [payer, transaction, network]
+      additionalProperties: false
+      properties:
+        payer:
+          $ref: "#/components/schemas/Address"
+        transaction:
+          type: string
+          description: "Hash de `transferWithAuthorization`. Vide en preview."
+        network:
+          type: string
+          enum: [base-sepolia]
+
+    CertifyResponse:
+      type: object
+      required: [certificate, integrite, offer, payment]
+      properties:
+        certificate:
+          $ref: "#/components/schemas/PublicCertificate"
+        integrite:
+          type: string
+          enum: [non_fourni]
+          description: Jamais fusionné avec le verdict. Un MAC d'émetteur n'est pas une preuve d'intégrité de A.
+        offer:
+          $ref: "#/components/schemas/Offer"
+        payment:
+          oneOf:
+            - $ref: "#/components/schemas/PaymentPreview"
+            - $ref: "#/components/schemas/PaymentSettled"
+
+    Erreur:
+      type: object
+      required: [erreur]
+      additionalProperties: false
+      properties:
+        erreur:
+          type: string
+
+    ExtraUsdc:
+      type: object
+      required: [name, version]
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          enum: [USDC]
+        version:
+          type: string
+          enum: ["2"]
+
+    PaymentRequirements:
+      type: object
+      required:
+        - scheme
+        - network
+        - maxAmountRequired
+        - asset
+        - payTo
+        - resource
+        - description
+        - mimeType
+        - maxTimeoutSeconds
+        - extra
+      additionalProperties: false
+      description: |
+        Requirements **hébergés**. `maxAmountRequired` = `"1000"` (1.0/1.1)
+        ou `"50000"` (1.2). Jamais le montant ni le `payTo` du client.
+      properties:
+        scheme:
+          type: string
+          enum: [exact]
+        network:
+          type: string
+          enum: [base-sepolia]
+        maxAmountRequired:
+          type: string
+          enum: ["1000", "50000"]
+          description: |
+            Atomic USDC (6 décimales). `"1000"` = 0,001 USDC (reçu 1.0/1.1).
+            `"50000"` = 0,05 USDC (grille 1.2).
+        asset:
+          $ref: "#/components/schemas/Address"
+          description: "USDC Base Sepolia `0x036CbD53842c5426634e7929541eC2318f3dCF7e`"
+        payTo:
+          $ref: "#/components/schemas/Address"
+        resource:
+          type: string
+          example: /api/v1/certify
+        description:
+          type: string
+          example: "HANDOFF CERT — un certificat"
+        mimeType:
+          type: string
+          enum: [application/json]
+        maxTimeoutSeconds:
+          type: integer
+          example: 60
+        extra:
+          $ref: "#/components/schemas/ExtraUsdc"
+
+    PaymentAuthorization:
+      type: object
+      required: [from, to, value, validAfter, validBefore, nonce]
+      additionalProperties: false
+      description: EIP-3009 TransferWithAuthorization
+      properties:
+        from:
+          $ref: "#/components/schemas/Address"
+        to:
+          $ref: "#/components/schemas/Address"
+        value:
+          type: string
+          description: "Doit égaler `maxAmountRequired` hébergé."
+        validAfter:
+          type: string
+        validBefore:
+          type: string
+        nonce:
+          $ref: "#/components/schemas/Bytes32"
+
+    ExactPayload:
+      type: object
+      required: [signature, authorization]
+      additionalProperties: false
+      properties:
+        signature:
+          $ref: "#/components/schemas/Hex"
+        authorization:
+          $ref: "#/components/schemas/PaymentAuthorization"
+
+    PaymentPayload:
+      type: object
+      required: [x402Version, scheme, network, payload]
+      additionalProperties: false
+      description: "Contenu de `X-PAYMENT` / `PAYMENT-SIGNATURE` (JSON ou base64)."
+      properties:
+        x402Version:
+          type: integer
+          enum: [1]
+        scheme:
+          type: string
+          enum: [exact]
+        network:
+          type: string
+          enum: [base-sepolia]
+        payload:
+          $ref: "#/components/schemas/ExactPayload"
+
+    Settlement:
+      type: object
+      required: [success, transaction, network]
+      description: Présent sur 402 si un settle a été tenté (échec, pending, replay).
+      properties:
+        success:
+          type: boolean
+        payer:
+          $ref: "#/components/schemas/Address"
+        transaction:
+          type: string
+          description: "Hash on-chain, ou vide si échec. Replay = la même tx."
+        network:
+          type: string
+          enum: [base-sepolia]
+        errorReason:
+          type: string
+          enum:
+            - version_mismatch
+            - scheme_mismatch
+            - network_mismatch
+            - merchant_unconfigured
+            - payTo_mismatch
+            - amount_mismatch
+            - asset_mismatch
+            - window_expired
+            - nonce_replay
+            - bad_signature
+            - signer_mismatch
+            - no_settler_key
+            - settle_pending
+            - settle_failed
+            - payment_invalid
+            - nonce_consumed
+        replay:
+          type: boolean
+
+    PaymentRequired:
+      type: object
+      required: [x402Version, error, accepts]
+      description: |
+        Corps HTTP **402 Payment Required**, x402 protocol version **1**.
+        Aligné sur `paymentRequiredBody()` — pas la v2 (pas de `resource` objet,
+        pas de CAIP-2, `maxAmountRequired` et non `amount`).
+      properties:
+        x402Version:
+          type: integer
+          enum: [1]
+        error:
+          type: string
+          description: |
+            `X-PAYMENT header is required` si header absent.
+            Sinon `errorReason` du settle / admit (`nonce_consumed`, …).
+        accepts:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PaymentRequirements"
+        settlement:
+          $ref: "#/components/schemas/Settlement"
+
+    LedgerInfo:
+      type: object
+      required:
+        - table
+        - key
+        - backend
+        - settle_replay
+        - verify_consumed
+        - verify_consumes
+      properties:
+        table:
+          type: string
+          enum: [x402_nonces]
+        key:
+          type: array
+          items:
+            type: string
+            enum: [network, payer, nonce]
+        backend:
+          type: string
+          description: "`memory` (preview) ou SQL Neon (production)."
+        settle_replay:
+          type: string
+          enum: [same_transaction]
+        verify_consumed:
+          type: string
+          enum: [nonce_replay]
+        verify_consumes:
+          type: boolean
+          enum: [false]
+
+    CatalogueX402:
+      type: object
+      required:
+        - network
+        - amount
+        - payTo
+        - enforced
+        - facilitator
+        - ledger
+        - accepts
+      properties:
+        network:
+          type: string
+          enum: [base-sepolia]
+        amount:
+          type: string
+          enum: ["1000"]
+          description: Reçu (catalogue). Grille 1.2 = 50000 via hostedRequirementsFor.
+        payTo:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/Address"
+        enforced:
+          type: boolean
+        facilitator:
+          type: string
+          example: /api/x402
+        ledger:
+          $ref: "#/components/schemas/LedgerInfo"
+        accepts:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentRequirements"
+
+    Catalogue:
+      type: object
+      required:
+        - sku
+        - endpoint
+        - price_eur
+        - billing
+        - method
+        - ruleset
+        - rulesets
+        - x402
+      properties:
+        sku:
+          type: string
+          enum: [handoff-cert-v1]
+        endpoint:
+          type: string
+          enum: [/api/v1/certify]
+        price_eur:
+          type: number
+          example: 0.001
+        billing:
+          type: string
+          enum: [preview, x402]
+        method:
+          type: string
+          enum: [POST]
+        ruleset:
+          type: string
+          enum: ["1.0"]
+          description: SKU vendu = 1.0. 1.1 et 1.2 se demandent dans le body POST.
+        rulesets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ruleset"
+          example: ["1.0", "1.1", "1.2"]
+        x402:
+          $ref: "#/components/schemas/CatalogueX402"
+
+  examples:
+    ReceiptRequirements:
+      summary: Reçu 1.0 / 1.1 — 1000 atomic
+      value:
+        scheme: exact
+        network: base-sepolia
+        maxAmountRequired: "1000"
+        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+        payTo: "0x0000000000000000000000000000000000000000"
+        resource: /api/v1/certify
+        description: "HANDOFF CERT — un certificat"
+        mimeType: application/json
+        maxTimeoutSeconds: 60
+        extra:
+          name: USDC
+          version: "2"
+    GrilleRequirements:
+      summary: Grille 1.2 — 50000 atomic
+      value:
+        scheme: exact
+        network: base-sepolia
+        maxAmountRequired: "50000"
+        asset: "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+        payTo: "0x0000000000000000000000000000000000000000"
+        resource: /api/v1/certify
+        description: "HANDOFF CERT — un certificat"
+        mimeType: application/json
+        maxTimeoutSeconds: 60
+        extra:
+          name: USDC
+          version: "2"
