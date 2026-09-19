@@ -138,6 +138,9 @@ casse.
 
 Dossier : [`falsification/`](./falsification/).
 
+Bounty faux REPRENABLE : [`/bounty`](./src/routes/bounty.tsx) paie un nouveau KFP si 1.2 PASSe encore. Pas de cash tant que ce n'est pas réel.
+
+
 ## Lancer
 
 ```bash
@@ -146,7 +149,7 @@ npm test
 npm run dev
 ```
 
-Interface : Accueil · Cap · Offre · Certifier · Falsification · Adopter · Verdict.
+Interface : Accueil · Cap · Offre · Bounty · Certifier · Falsification · Adopter · Verdict.
 
 ## Licence
 
