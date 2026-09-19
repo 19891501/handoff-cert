@@ -23,3 +23,15 @@ jobs:
 
       - name: npx tsx tests
         run: npx --yes tsx --test src/lib/tests
+
+  sdk-rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo test -p handoff-cert
+        run: cargo test -p handoff-cert
+        env:
+          CI: "true"
+
