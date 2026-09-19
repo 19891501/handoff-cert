@@ -24,7 +24,7 @@ import { scanText, scanValue } from "../bench/markers.ts";
 import { ENGINE_FIXTURES, traceEngine } from "../bench/engine-trace.ts";
 import { judge } from "../handoff/engine.ts";
 import { CLAIM_ONLY_OK, STATUS_ONLY, statusPolarity } from "../bench/tokens.ts";
-import { OFFER } from "../offer/catalog.ts";
+import { OFFER, TIERS, previewCheckout } from "../offer/catalog.ts";
 import { serveCertify } from "../offer/serve.ts";
 import { getCase } from "../handoff/cases.ts";
 import { FINAL_VERDICT, ATTACK_11_NOTE, ATTACK_12_NOTE } from "../bench/verdict.ts";
@@ -44,7 +44,7 @@ import {
   signExact,
   verifyPayment,
 } from "../offer/x402.ts";
-import { GATE_SKU, RECEIPT } from "../offer/mission.ts";
+import { GATE_SKU, LICENCE, RECEIPT } from "../offer/mission.ts";
 import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -389,6 +389,25 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(res.certificate.verdict, "REPRENABLE", "verdict");
     eq(res.offer.billing, "preview", "pas de 402 faux");
     if ("findings" in (res.certificate as object)) fail("le public n'expose pas findings");
+  });
+
+  await check("Prix", "tiers", "trois paliers, billing preview, pas de checkout fantôme", () => {
+    eq(TIERS.length, 3, "paliers");
+    eq(TIERS[0].sku, RECEIPT.sku, "reçu");
+    eq(TIERS[1].sku, GATE_SKU.sku, "grille");
+    eq(TIERS[2].sku, LICENCE.sku, "licence");
+    eq(RECEIPT.price_eur, 0.001, "0.001");
+    eq(GATE_SKU.price_eur, 0.05, "0.05");
+    eq(LICENCE.price_eur, 48_000, "48k");
+    eq(LICENCE.sold, false, "pas vendu");
+    eq(OFFER.billing, "preview", "preview");
+    for (const tier of TIERS) {
+      const out = previewCheckout(tier.sku);
+      eq(out.success, false, `${tier.sku} success`);
+      eq(out.charged, false, `${tier.sku} charged`);
+      eq(out.transaction, "", `${tier.sku} tx`);
+      eq(out.billing, "preview", `${tier.sku} billing`);
+    }
   });
 
   await check("Tokens", "families", "status true ≠ claim true ; confirme claim-only", () => {
