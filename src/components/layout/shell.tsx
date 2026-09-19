@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { to: "/", label: "Accueil" },
   { to: "/cap", label: "Cap" },
+  { to: "/prix", label: "Prix" },
   { to: "/offre", label: "Offre" },
   { to: "/verdict", label: "Verdict" },
   { to: "/attaque", label: "Attaque" },
@@ -56,6 +57,9 @@ export function Shell({ children }: { children: ReactNode }) {
           <p className="flex flex-wrap gap-x-3 gap-y-1">
             <Link to="/verdict" className="hover:text-foreground">
               Verdict
+            </Link>
+            <Link to="/prix" className="hover:text-foreground">
+              Prix
             </Link>
             <Link to="/tests" className="hover:text-foreground">
               Tests

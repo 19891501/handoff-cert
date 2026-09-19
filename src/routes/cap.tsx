@@ -21,6 +21,9 @@ function CapPage() {
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Button asChild>
+          <Link to="/prix">Les prix</Link>
+        </Button>
+        <Button asChild variant="outline">
           <Link to="/offre">Encaisser</Link>
         </Button>
         <Button asChild variant="outline">
