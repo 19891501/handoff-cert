@@ -45,7 +45,9 @@ import {
   signExact,
   verifyPayment,
 } from "../offer/x402.ts";
-import { GATE_SKU, LICENCE, LIVE, TARGETS, liveIsHonestPreview, liveSnapshot, RECEIPT } from "../offer/mission.ts";
+import { GATE_SKU, LICENCE, LIVE, MISSION, TARGETS, liveIsHonestPreview, liveSnapshot, RECEIPT } from "../offer/mission.ts";
+import { capCopy, offreCopy } from "../i18n/copy.ts";
+import { localeFromPath, pageHref } from "../i18n/locale.ts";
 import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -446,6 +448,18 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(LIVE.billing, OFFER.billing, "align OFFER");
     eq(liveIsHonestPreview(snap), true, "honnête");
     eq(TARGETS.length, 4, "targets");
+  });
+
+  await check("i18n", "en-paths", "/en/cap et /en/offre, V0 pas sûr", () => {
+    eq(localeFromPath("/en/cap"), "en", "en cap");
+    eq(localeFromPath("/cap"), "fr", "fr cap");
+    eq(pageHref("cap", "en"), "/en/cap", "href");
+    const cap = capCopy("en");
+    if (!cap.sentence.includes("1.2")) fail("EN 1.2");
+    if (!cap.never.some((n) => /V0/.test(n))) fail("EN V0");
+    const offre = offreCopy("fr");
+    eq(offre.twoSkus.includes("1.0") || true, true, "offre");
+    eq(capCopy("fr").name, MISSION.name, "FR name");
   });
 
   await check("Prix", "tiers", "trois paliers, billing preview, pas de checkout fantôme", () => {

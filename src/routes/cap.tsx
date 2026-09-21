@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LangToggle } from "@/components/layout/lang-toggle";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -50,9 +51,12 @@ function CapPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:py-16">
-      <p className="reveal text-xs font-medium uppercase tracking-[0.22em] text-subtle">
-        Cap · {MISSION.horizon} · liberté totale
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="reveal text-xs font-medium uppercase tracking-[0.22em] text-subtle">
+          Cap · {MISSION.horizon} · liberté totale
+        </p>
+        <LangToggle page="cap" locale="fr" />
+      </div>
       <h1 className="reveal reveal-1 mt-4 max-w-3xl font-display text-4xl leading-[1.1] tracking-tight sm:text-5xl md:text-6xl">
         {MISSION.name}
       </h1>

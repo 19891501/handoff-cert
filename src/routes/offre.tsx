@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { LangToggle } from "@/components/layout/lang-toggle";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { OFFER } from "@/lib/offer/catalog";
@@ -78,9 +79,12 @@ function OffrePage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-12">
-      <p className="text-xs font-medium uppercase tracking-[0.22em] text-subtle">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs font-medium uppercase tracking-[0.22em] text-subtle">
         SKU {OFFER.sku} · ruleset {OFFER.ruleset}
       </p>
+        <LangToggle page="offre" locale="fr" />
+      </div>
       <h1 className="mt-2 font-display text-4xl tracking-tight sm:text-5xl">
         {OFFER.name}
       </h1>
