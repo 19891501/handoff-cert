@@ -31,6 +31,7 @@ import { Route as PatternsRouteImport } from './routes/patterns'
 import { Route as PreuveRouteImport } from './routes/preuve'
 import { Route as PrixRouteImport } from './routes/prix'
 import { Route as RulesRouteImport } from './routes/rules'
+import { Route as SdkRouteImport } from './routes/sdk'
 import { Route as ShaRouteImport } from './routes/sha'
 import { Route as StarterRouteImport } from './routes/starter'
 import { Route as TestsRouteImport } from './routes/tests'
@@ -153,6 +154,11 @@ const RulesRoute = RulesRouteImport.update({
   path: '/rules',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SdkRoute = SdkRouteImport.update({
+  id: '/sdk',
+  path: '/sdk',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShaRoute = ShaRouteImport.update({
   id: '/sha',
   path: '/sha',
@@ -232,7 +238,9 @@ export interface FileRoutesByFullPath {
   '/preuve': typeof PreuveRoute
   '/prix': typeof PrixRoute
   '/rules': typeof RulesRoute
+  '/sdk': typeof SdkRoute
   '/sha': typeof ShaRoute
+  '/sdk': typeof SdkRoute
   '/starter': typeof StarterRoute
   '/tests': typeof TestsRoute
   '/tokens': typeof TokensRoute
@@ -267,7 +275,9 @@ export interface FileRoutesByTo {
   '/preuve': typeof PreuveRoute
   '/prix': typeof PrixRoute
   '/rules': typeof RulesRoute
+  '/sdk': typeof SdkRoute
   '/sha': typeof ShaRoute
+  '/sdk': typeof SdkRoute
   '/starter': typeof StarterRoute
   '/tests': typeof TestsRoute
   '/tokens': typeof TokensRoute
@@ -303,7 +313,9 @@ export interface FileRoutesById {
   '/preuve': typeof PreuveRoute
   '/prix': typeof PrixRoute
   '/rules': typeof RulesRoute
+  '/sdk': typeof SdkRoute
   '/sha': typeof ShaRoute
+  '/sdk': typeof SdkRoute
   '/starter': typeof StarterRoute
   '/tests': typeof TestsRoute
   '/tokens': typeof TokensRoute
@@ -446,6 +458,7 @@ export interface RootRouteChildren {
   PreuveRoute: typeof PreuveRoute
   PrixRoute: typeof PrixRoute
   RulesRoute: typeof RulesRoute
+  SdkRoute: typeof SdkRoute
   ShaRoute: typeof ShaRoute
   StarterRoute: typeof StarterRoute
   TestsRoute: typeof TestsRoute
@@ -615,6 +628,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RulesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sdk': {
+      id: '/sdk'
+      path: '/sdk'
+      fullPath: '/sdk'
+      preLoaderRoute: typeof SdkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sha': {
       id: '/sha'
       path: '/sha'
@@ -718,6 +738,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreuveRoute: PreuveRoute,
   PrixRoute: PrixRoute,
   RulesRoute: RulesRoute,
+  SdkRoute: SdkRoute,
   ShaRoute: ShaRoute,
   StarterRoute: StarterRoute,
   TestsRoute: TestsRoute,

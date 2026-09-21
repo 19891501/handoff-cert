@@ -22,6 +22,7 @@
     "test": "npx tsx --test src/lib/tests/suite.test.ts src/lib/tests/serve-ruleset.test.ts src/lib/tests/mission.test.ts src/lib/tests/bounty.test.ts examples/langgraph/graph.test.ts && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts && npm run test:sdk",
     "example:langgraph": "npx tsx examples/langgraph/index.ts",
     "test:sdk": "node --experimental-strip-types --test packages/cert/src/*.test.ts",
+    "test:sdk:rust": "cargo test -p handoff-cert",
     "publish:cert": "node scripts/publish-cert.mjs",
     "lint": "eslint .",
     "format": "prettier --write ."

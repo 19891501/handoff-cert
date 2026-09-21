@@ -1,0 +1,21 @@
+[package]
+name = "handoff-cert"
+version = "0.12.0"
+edition = "2021"
+rust-version = "1.74"
+license = "MIT"
+description = "TLS of agent handoffs: certify() + gate_resume(). Ruleset 1.0 is a frozen receipt; 1.2 is the paid grille."
+repository = "https://github.com/19891501/handoff-cert"
+homepage = "https://github.com/19891501/handoff-cert"
+readme = "README.md"
+keywords = ["handoff", "agent", "certificate", "x402", "langgraph"]
+categories = ["api-bindings", "web-programming::http-client"]
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "3", default-features = false, features = ["json"] }
+
+[package.metadata.docs.rs]
+all-features = true
