@@ -74,6 +74,15 @@ describe("preview smoke (parent :8080)", () => {
     assert.equal(json.live?.billing, "preview");
     assert.equal(json.horizon, "2030");
     assert.ok(Array.isArray(json.targets) && json.targets.length === 4, "4 cibles");
+  it("GET /bounty → 200, body mentions cash or 1.2", async (t) => {
+    const res = await fetchLive(t, "/bounty");
+    if (!res) return;
+    assert.equal(res.status, 200);
+    const body = await res.text();
+    assert.ok(
+      body.includes("1.2") || body.includes("cash") || body.includes("Bounty"),
+      "body must mention bounty / 1.2 / cash",
+    );
   });
 
   it("GET /api/v1/certify → 200 JSON sku", async (t) => {

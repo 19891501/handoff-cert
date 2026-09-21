@@ -48,6 +48,14 @@ import {
 import { GATE_SKU, LICENCE, LIVE, MISSION, TARGETS, liveIsHonestPreview, liveSnapshot, RECEIPT } from "../offer/mission.ts";
 import { capCopy, offreCopy } from "../i18n/copy.ts";
 import { localeFromPath, pageHref } from "../i18n/locale.ts";
+import { GATE_SKU, RECEIPT } from "../offer/mission.ts";
+import {
+  BOUNTY,
+  bountyCashOpen,
+  bountyDueEur,
+  lockedTagOf,
+  probeBounty,
+} from "../offer/bounty.ts";
 import { memoryLedger, sqlLedger, type SqlLike } from "../offer/nonce-ledger.ts";
 import { generatePrivateKey, privateKeyToAccount } from "viem/accounts";
 
@@ -370,6 +378,26 @@ export async function runSuite(): Promise<CheckResult[]> {
     eq(r12.nControlOk, 2, "ctl");
     eq(r12.killer?.attack.id ?? "", ATTACK_12_NOTE.attack12_killer, "killer");
     eq(FINAL_VERDICT.kills, 4, "gel 1.0 intact");
+  });
+
+  await check("Bounty", "cash-ferme", "1.2 PASS, pas de cash tant que ce n'est pas réel", async () => {
+    eq(BOUNTY.target.ruleset, "1.2", "ruleset");
+    eq(BOUNTY.target.gate, "PASS", "gate");
+    eq(BOUNTY.cash, false, "cash");
+    eq(BOUNTY.billing, "preview", "billing");
+    eq(BOUNTY.paid_out_eur, 0, "versé");
+    eq(BOUNTY.paying_customers, 0, "clients");
+    eq(bountyCashOpen(), false, "ouvert");
+    eq(bountyDueEur(true), 0, "due");
+    eq(ATTACK_12_NOTE.attack12_faux_reprenable, 0, "corpus 1.2");
+    const x07 = CORPUS_CASES.find((c) => c.id === "X07");
+    if (!x07) fail("X07");
+    eq(lockedTagOf(x07.payload), "KFP-001", "lock");
+    const p = await probeBounty(x07.payload, "CORROMPU");
+    eq(p.qualifies, false, "001");
+    eq(p.v12.decision, "STOP", "1.2");
+    eq(p.due_eur, 0, "IOU");
+    eq(p.cash, false, "probe cash");
   });
 
   await check("Falsification", "classes-occupancy", "4 classes occupées, parent vide", () => {

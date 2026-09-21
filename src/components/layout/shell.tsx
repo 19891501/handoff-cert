@@ -8,6 +8,7 @@ const NAV = [
   { to: "/prix", label: "Prix" },
   { to: "/offre", label: "Offre" },
   { to: "/starter", label: "Starter" },
+  { to: "/bounty", label: "Bounty" },
   { to: "/verdict", label: "Verdict" },
   { to: "/attaque", label: "Attaque" },
 ] as const;
@@ -79,6 +80,9 @@ export function Shell({ children }: { children: ReactNode }) {
             </Link>
             <Link to="/attaque" className="hover:text-foreground">
               Attaque
+            </Link>
+            <Link to="/bounty" className="hover:text-foreground">
+              Bounty
             </Link>
             <Link to="/goto" className="hover:text-foreground">
               Goto

@@ -121,9 +121,12 @@ function FalsifyPage() {
           Protocole gelé. Lancé en mécanique (GATE = B). Un négatif est un livrable.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">{RESET_PROTOCOL.threshold}</p>
-        <p className="mt-4">
+        <p className="mt-4 flex flex-wrap gap-3">
           <Button asChild variant="outline">
             <Link to="/attaque">Attaquer CERT+GATE</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/bounty">Bounty 1.2</Link>
           </Button>
         </p>
       </section>
