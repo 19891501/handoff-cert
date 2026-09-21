@@ -26,6 +26,7 @@ import { Route as MarqueursRouteImport } from './routes/marqueurs'
 import { Route as OffreRouteImport } from './routes/offre'
 import { Route as PatternsRouteImport } from './routes/patterns'
 import { Route as PreuveRouteImport } from './routes/preuve'
+import { Route as PrixRouteImport } from './routes/prix'
 import { Route as RulesRouteImport } from './routes/rules'
 import { Route as ShaRouteImport } from './routes/sha'
 import { Route as StarterRouteImport } from './routes/starter'
@@ -124,6 +125,11 @@ const PreuveRoute = PreuveRouteImport.update({
   path: '/preuve',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrixRoute = PrixRouteImport.update({
+  id: '/prix',
+  path: '/prix',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RulesRoute = RulesRouteImport.update({
   id: '/rules',
   path: '/rules',
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/offre': typeof OffreRoute
   '/patterns': typeof PatternsRoute
   '/preuve': typeof PreuveRoute
+  '/prix': typeof PrixRoute
   '/rules': typeof RulesRoute
   '/sha': typeof ShaRoute
   '/starter': typeof StarterRoute
@@ -234,6 +241,7 @@ export interface FileRoutesByTo {
   '/offre': typeof OffreRoute
   '/patterns': typeof PatternsRoute
   '/preuve': typeof PreuveRoute
+  '/prix': typeof PrixRoute
   '/rules': typeof RulesRoute
   '/sha': typeof ShaRoute
   '/starter': typeof StarterRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/offre': typeof OffreRoute
   '/patterns': typeof PatternsRoute
   '/preuve': typeof PreuveRoute
+  '/prix': typeof PrixRoute
   '/rules': typeof RulesRoute
   '/sha': typeof ShaRoute
   '/starter': typeof StarterRoute
@@ -299,6 +308,7 @@ export interface FileRouteTypes {
     | '/offre'
     | '/patterns'
     | '/preuve'
+    | '/prix'
     | '/rules'
     | '/sha'
     | '/starter'
@@ -330,6 +340,7 @@ export interface FileRouteTypes {
     | '/offre'
     | '/patterns'
     | '/preuve'
+    | '/prix'
     | '/rules'
     | '/sha'
     | '/starter'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/offre'
     | '/patterns'
     | '/preuve'
+    | '/prix'
     | '/rules'
     | '/sha'
     | '/starter'
@@ -393,6 +405,7 @@ export interface RootRouteChildren {
   OffreRoute: typeof OffreRoute
   PatternsRoute: typeof PatternsRoute
   PreuveRoute: typeof PreuveRoute
+  PrixRoute: typeof PrixRoute
   RulesRoute: typeof RulesRoute
   ShaRoute: typeof ShaRoute
   StarterRoute: typeof StarterRoute
@@ -528,6 +541,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreuveRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/prix': {
+      id: '/prix'
+      path: '/prix'
+      fullPath: '/prix'
+      preLoaderRoute: typeof PrixRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/rules': {
       id: '/rules'
       path: '/rules'
@@ -633,6 +653,7 @@ const rootRouteChildren: RootRouteChildren = {
   OffreRoute: OffreRoute,
   PatternsRoute: PatternsRoute,
   PreuveRoute: PreuveRoute,
+  PrixRoute: PrixRoute,
   RulesRoute: RulesRoute,
   ShaRoute: ShaRoute,
   StarterRoute: StarterRoute,

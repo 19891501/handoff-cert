@@ -180,6 +180,9 @@ function OffrePage() {
           {busy ? "Appel…" : "Appeler l'API"}
         </Button>
         <Button asChild variant="outline">
+          <Link to="/prix">Les trois paliers</Link>
+        </Button>
+        <Button asChild variant="outline">
           <Link to="/adopt">Brancher wrapNode</Link>
         </Button>
         <Button asChild variant="outline">

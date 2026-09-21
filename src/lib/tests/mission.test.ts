@@ -1,9 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { OFFER, OFFERS } from "../offer/catalog.ts";
+import { OFFER, OFFERS, TIERS, previewCheckout } from "../offer/catalog.ts";
 import {
   GATE_SKU,
   KPI,
+  LICENCE,
   LIVE,
   MISSION,
   NEVER,
@@ -61,5 +62,34 @@ describe("mission commerciale", () => {
     assert.equal(OFFERS.length, 2);
     assert.equal(OFFERS[0], RECEIPT);
     assert.equal(OFFERS[1], GATE_SKU);
+  });
+
+  it("trois paliers : reçu, grille, licence 48k", () => {
+    assert.equal(TIERS.length, 3);
+    assert.equal(TIERS[0], RECEIPT);
+    assert.equal(TIERS[1], GATE_SKU);
+    assert.equal(TIERS[2], LICENCE);
+    assert.equal(RECEIPT.price_eur, 0.001);
+    assert.equal(GATE_SKU.price_eur, 0.05);
+    assert.equal(LICENCE.price_eur, 48_000);
+    assert.equal(LICENCE.period, "an");
+    assert.equal(LICENCE.sold, false);
+    assert.equal(OFFER.billing, "preview");
+  });
+
+  it("checkout preview : jamais un succès, jamais un hash", () => {
+    for (const tier of TIERS) {
+      const out = previewCheckout(tier.sku);
+      assert.equal(out.success, false, tier.sku);
+      assert.equal(out.charged, false, tier.sku);
+      assert.equal(out.transaction, "", tier.sku);
+      assert.equal(out.billing, "preview", tier.sku);
+    }
+    const ghost = previewCheckout("sku-inventé");
+    assert.equal(ghost.success, false);
+    assert.equal(ghost.charged, false);
+    assert.equal(ghost.transaction, "");
+    const licence = previewCheckout(LICENCE.sku);
+    assert.match(licence.reason, /pas encore encaissé/);
   });
 });

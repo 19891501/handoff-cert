@@ -54,6 +54,9 @@ function Home() {
           </Link>
         </Button>
         <Button asChild variant="outline">
+          <Link to="/prix">Les prix</Link>
+        </Button>
+        <Button asChild variant="outline">
           <Link to="/offre">Les SKU</Link>
         </Button>
         <Button asChild variant="outline">
