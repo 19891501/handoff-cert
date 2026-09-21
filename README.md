@@ -87,6 +87,26 @@ SKU `handoff-gate-v12` · ruleset `1.2` · **0,05 € / certificat** · grille p
 Facturation `preview` tant que `X402_PAY_TO` n’est pas posé. Aucun client
 payant.
 
+## SDK TypeScript `@handoff/cert` + CLI `npx handoff-cert`
+
+Pas encore sur npm (pas de credentials inventés). Export path prêt :
+
+`packages/cert` → `@handoff/cert` → `exports["."] = dist/index.js`.
+
+```ts
+import { certify, gateResume } from "@handoff/cert";
+const receipt = await certify(paquet); // 1.0 reçu 0,001€ preview
+const gate = await gateResume(paquet, { ruleset: "1.2" }); // grille 0,05€
+```
+
+```bash
+npx handoff-cert certify --ruleset 1.0 packet.json
+npx handoff-cert gate --ruleset 1.2 packet.json
+npx handoff-cert catalogue
+```
+
+V0 n'est pas une grille. Billing `preview`. Pas de clients payants.
+
 ## x402 (Base Sepolia)
 
 Facilitateur local, spec v1 `exact` / EIP-3009 USDC.
